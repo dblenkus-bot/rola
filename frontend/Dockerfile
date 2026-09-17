@@ -1,16 +1,21 @@
-FROM node:12-alpine as base
+FROM node:24.21.0-alpine AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 
-FROM base as installer
-WORKDIR /node
-COPY package.json yarn.lock ./
-RUN yarn install --no-progress && yarn cache clean
-ENV PATH /node/node_modules/.bin:$PATH
-WORKDIR /node/app
+FROM dependencies AS development
 COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev"]
 
-FROM installer as builder
+FROM dependencies AS build
+COPY . .
+ARG VITE_API_BASE_URL
+ARG VITE_SENTRY_DSN
+ARG VITE_PAYPAL_CLIENT_ID
 RUN npm run build
 
-FROM nginx:1.16-alpine
-COPY --from=builder /node/app/build /usr/share/nginx/html
-COPY docker/default.conf /etc/nginx/conf.d/
+FROM nginx:1.30.5-alpine AS production
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY docker/default.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
