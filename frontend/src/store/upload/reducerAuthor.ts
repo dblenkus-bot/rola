@@ -9,14 +9,16 @@ const reducer = (
   action: UploadActionTypes,
 ): AuthorModel => {
   switch (action.type) {
-    case AUTHOR_UPDATE:
+    case AUTHOR_UPDATE: {
       const { name, value } = action.payload;
       return {
         ...state,
         [name]: value,
       };
-    default:
+    }
+    default: {
       return state;
+    }
   }
 };
 

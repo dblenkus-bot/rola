@@ -15,19 +15,20 @@ const reducer = (
   action: NotificationsActionTypes,
 ): NotificationsState => {
   switch (action.type) {
-    case ADD_NOTIFICATION:
+    case ADD_NOTIFICATION: {
       const newNotification = { id: nextId, ...action.payload };
       nextId += 1;
       return [...state, newNotification];
-
-    case DELETE_NOTIFICATION:
+    }
+    case DELETE_NOTIFICATION: {
       return state.filter(
         (notification: Notification) =>
           notification.id !== action.meta.notificationId,
       );
-
-    default:
+    }
+    default: {
       return state;
+    }
   }
 };
 

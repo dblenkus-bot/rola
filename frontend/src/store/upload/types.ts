@@ -25,62 +25,62 @@ export const SUBMISSION_UPDATE = 'SUBMISSION_UPDATE';
 export const IMAGE_INIT = 'IMAGE_INIT';
 export const IMAGE_STORE = 'IMAGE_STORE';
 
-interface UploadInitAction {
+type UploadInitAction = {
   type: typeof UPLOAD_INIT;
   payload: Contest;
-}
+};
 
-interface UploadSetContestAction {
+type UploadSetContestAction = {
   type: typeof UPLOAD_SET_CONTEST;
   payload: ContestModel;
-}
+};
 
-interface UploadSetRedirectAction {
+type UploadSetRedirectAction = {
   type: typeof UPLOAD_SET_REDIRECT;
-}
+};
 
-interface UploadStartUploadingAction {
+type UploadStartUploadingAction = {
   type: typeof UPLOAD_SET_UPLOADING;
-}
+};
 
-interface UploadStopUploadingAction {
+type UploadStopUploadingAction = {
   type: typeof UPLOAD_UNSET_UPLOADING;
-}
+};
 
-interface AuthorUpdateAction {
+type AuthorUpdateAction = {
   type: typeof AUTHOR_UPDATE;
   payload: InputChange | DateChange;
-}
+};
 
-interface ThemeInitAction {
+type ThemeInitAction = {
   type: typeof THEME_INIT;
   payload: Theme;
-}
+};
 
-interface SubmissionInitAction {
+type SubmissionInitAction = {
   type: typeof SUBMISSION_INIT;
   payload: SubmissionMeta;
-}
+};
 
-interface SubmissionUpdateAction {
+type SubmissionUpdateAction = {
   type: typeof SUBMISSION_UPDATE;
   theme_id: number;
   submission_id: number;
   payload: InputChange;
-}
+};
 
-interface ImageInitAction {
+type ImageInitAction = {
   type: typeof IMAGE_INIT;
   payload: ImageMeta;
-}
+};
 
-interface ImageStoreAction {
+type ImageStoreAction = {
   type: typeof IMAGE_STORE;
   theme_id: number;
   submission_id: number;
   image_id: number;
   payload: { file: File | undefined; url: string };
-}
+};
 
 export type UploadActionTypes =
   | UploadInitAction

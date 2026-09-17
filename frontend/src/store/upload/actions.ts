@@ -32,21 +32,22 @@ export const uploadInit = (payload: Contest): UploadActionTypes => ({
   payload,
 });
 
-export const uploadSubmit = (): AppThunk => async (dispatch, getState) => {
-  const { contest } = getState().upload;
+export const uploadSubmit =
+  (): AppThunk<Promise<void>> => async (dispatch, getState) => {
+    const { contest } = getState().upload;
 
-  dispatch(uploadSetUploading());
+    dispatch(uploadSetUploading());
 
-  const newContest = await validate(contest);
-  if (!newContest.errors.hasError) {
-    await upload(contest);
-    dispatch(uploadSetRedirect());
-  } else {
-    dispatch(uploadSetContest(newContest));
-  }
+    const newContest = await validate(contest);
+    if (!newContest.errors.hasError) {
+      await upload(contest);
+      dispatch(uploadSetRedirect());
+    } else {
+      dispatch(uploadSetContest(newContest));
+    }
 
-  dispatch(uploadUnsetUploading());
-};
+    dispatch(uploadUnsetUploading());
+  };
 
 export const uploadSetContest = (payload: ContestModel): UploadActionTypes => ({
   type: UPLOAD_SET_CONTEST,
@@ -117,7 +118,7 @@ export const imageUpdate =
     submission_id: number,
     image_id: number,
     payload: { file: File | undefined },
-  ): AppThunk =>
+  ): AppThunk<Promise<void>> =>
   async (dispatch) => {
     const { file } = payload;
     const url = !file ? '' : (await imageReader(file)).src;

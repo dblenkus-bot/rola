@@ -39,7 +39,7 @@ export const initializeStore =
     contestId: string,
     themeId: string,
     submissionId: number | undefined,
-  ): AppThunk =>
+  ): AppThunk<Promise<void>> =>
   async (dispatch): Promise<void> => {
     const { data: contest } = await ContestService.getContest(contestId);
     const theme = contest.themes.find((t) => t.id.toString() === themeId);
@@ -64,7 +64,7 @@ export const getCurrentSubmission = (state: AppState): Submission | null => {
   } = state;
 
   if (!submissions) return null;
-  return submissions[currentIndex];
+  return submissions[currentIndex] ?? null;
 };
 
 export const getIsPrevious = (state: AppState): boolean => {

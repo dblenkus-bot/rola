@@ -20,7 +20,7 @@ const reducer = (
 ): SubmissionModel => {
   switch (action.type) {
     case SUBMISSION_INIT: {
-      let { imageNumber } = action.payload;
+      const { imageNumber } = action.payload;
       const imageMeta = {
         isNew: true,
         isChanged: false,
@@ -51,8 +51,8 @@ const reducer = (
     }
     default: {
       if ('image_id' in action) {
-        let { description, images, meta, title } = state;
-        images = images.map((image) => {
+        const { description, meta, title } = state;
+        const images = state.images.map((image) => {
           return image.meta.id === action.image_id
             ? imageReducer(image, action)
             : image;

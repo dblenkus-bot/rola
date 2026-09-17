@@ -13,7 +13,7 @@ export const SET_SUBMISSION = 'JURY_SET_SUBMISSION';
 export const SET_PREVIOUS_SUBMISSION = 'JURY_SET_PREVIOUS_SUBMISSION';
 export const SET_NEXT_SUBMISSION = 'JURY_SET_NEXT_SUBMISSION';
 
-interface PerformInitializeAction {
+type PerformInitializeAction = {
   type: typeof PERFORM_INITIALIZE;
   payload: {
     contest: Contest;
@@ -21,20 +21,20 @@ interface PerformInitializeAction {
     submissions: Submission[];
     currentIndex: number;
   };
-}
+};
 
-interface SetSubmissionAction {
+type SetSubmissionAction = {
   type: typeof SET_SUBMISSION;
   payload: { submissionId: number };
-}
+};
 
-interface SetPreviousSubmissionAction {
+type SetPreviousSubmissionAction = {
   type: typeof SET_PREVIOUS_SUBMISSION;
-}
+};
 
-interface SetNextSubmissionAction {
+type SetNextSubmissionAction = {
   type: typeof SET_NEXT_SUBMISSION;
-}
+};
 
 export type JuryActionTypes =
   | PerformInitializeAction

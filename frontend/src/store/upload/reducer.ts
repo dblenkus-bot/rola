@@ -23,7 +23,7 @@ const reducer = (
   action: UploadActionTypes,
 ): UploadState => {
   switch (action.type) {
-    case UPLOAD_INIT:
+    case UPLOAD_INIT: {
       const contest = action.payload;
       return {
         ...state,
@@ -31,29 +31,34 @@ const reducer = (
           ...state.contest,
           meta: {
             title: contest.title,
-            description: contest.description,
-            noticeHtml: contest.notice_html,
-            headerImage: contest.header_image,
-            dobRequired: contest.dob_required,
-            clubShow: contest.club_show,
-            clubRequired: contest.club_required,
-            schoolShow: contest.school_show,
-            schoolRequired: contest.school_required,
+            description: contest.description ?? '',
+            noticeHtml: contest.notice_html ?? '',
+            headerImage: contest.header_image ?? null,
+            dobRequired: contest.dob_required ?? false,
+            clubShow: contest.club_show ?? false,
+            clubRequired: contest.club_required ?? false,
+            schoolShow: contest.school_show ?? false,
+            schoolRequired: contest.school_required ?? false,
           },
           themes: contest.themes.map((theme) =>
             themeReducer(undefined, themeInit(theme)),
           ),
         },
       };
-    case UPLOAD_SET_CONTEST:
+    }
+    case UPLOAD_SET_CONTEST: {
       return { ...state, contest: action.payload };
-    case UPLOAD_SET_REDIRECT:
+    }
+    case UPLOAD_SET_REDIRECT: {
       return { ...state, redirect: true };
-    case UPLOAD_SET_UPLOADING:
+    }
+    case UPLOAD_SET_UPLOADING: {
       return { ...state, uploading: true };
-    case UPLOAD_UNSET_UPLOADING:
+    }
+    case UPLOAD_UNSET_UPLOADING: {
       return { ...state, uploading: false };
-    default:
+    }
+    default: {
       let { themes } = state.contest;
       if ('theme_id' in action) {
         themes = themes.map((theme) => {
@@ -70,6 +75,7 @@ const reducer = (
           author: authorReducer(state.contest.author, action),
         },
       };
+    }
   }
 };
 
