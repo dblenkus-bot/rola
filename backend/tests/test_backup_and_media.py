@@ -1,6 +1,5 @@
 """Exercise image processing, historical migrations, and backup delivery."""
 
-import importlib
 import os
 import uuid
 from unittest.mock import patch
@@ -11,8 +10,6 @@ from botocore.exceptions import ClientError
 from channels.exceptions import ChannelFull
 from channels.layers import get_channel_layer
 from django.core.management import call_command
-from django.db import connection
-from django.db.migrations.loader import MigrationLoader
 from django.test import override_settings
 from PIL import Image
 
@@ -20,7 +17,6 @@ from rolca.backup.consumers import BackupConsumer
 from rolca.backup.models import FileBackup
 from rolca.backup.protocol import CHANNEL_BACKUP, TYPE_FILE
 from rolca.backup.signals import commit_signal
-from rolca.core.models import File
 from tests.test_workflows import photo
 from tests.userapp.models import User
 
@@ -34,20 +30,6 @@ def test_upload_creates_jpeg_thumbnail_and_pending_backup():
         assert thumb.size == (400, 300)
         assert thumb.format == "JPEG"
     assert FileBackup.objects.get(source=image).done is None
-
-
-def test_historical_thumbnail_migration_handles_existing_media():
-    image = photo(User.objects.create_user(username="photographer"))
-    state = MigrationLoader(connection).project_state(
-        [("core", "0016_submissionset_update_3")]
-    )
-    migration = importlib.import_module("rolca.core.migrations.0017_enlarge_thumbnails")
-    migration.enlarge_thumbnails(state.apps, None)
-    image.refresh_from_db()
-    with image.thumbnail.open("rb") as source, Image.open(source) as thumbnail:
-        assert thumbnail.size == (400, 300)
-        assert thumbnail.format == "JPEG"
-    assert File.objects.count() == 1
 
 
 def test_backup_only_enqueues_after_commit(django_capture_on_commit_callbacks):

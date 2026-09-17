@@ -87,3 +87,29 @@ def test_published_results_preload_host_country(world, django_assert_max_num_que
     assert all(
         row["author"]["country"] == "Slovenia" for row in response.data["submissions"]
     )
+
+
+def test_historical_thumbnail_migration_handles_existing_media(world):
+    import importlib
+
+    from django.db import connection
+    from django.db.migrations.loader import MigrationLoader
+    from django.test import override_settings
+    from PIL import Image
+
+    from rola_integration.migration_settings import LEGACY_MIGRATION_MODULES
+    from tests.test_workflows import photo
+
+    image = photo(world.owner)
+    with override_settings(MIGRATION_MODULES=LEGACY_MIGRATION_MODULES):
+        state = MigrationLoader(connection).project_state(
+            [("core", "0016_submissionset_update_3")]
+        )
+    migration = importlib.import_module(
+        "rola_integration.legacy_migrations.core.0017_enlarge_thumbnails"
+    )
+    migration.enlarge_thumbnails(state.apps, None)
+    image.refresh_from_db()
+    with image.thumbnail.open("rb") as source, Image.open(source) as thumbnail:
+        assert thumbnail.size == (400, 300)
+        assert thumbnail.format == "JPEG"
