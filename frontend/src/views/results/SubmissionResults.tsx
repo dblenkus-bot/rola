@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -37,13 +39,17 @@ const SubmissionResults: React.FC = () => {
     throw new Error('Missing submissionId route parameter');
   }
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetch = async (): Promise<void> => {
       const { data } = await ResultsSubmissionService.get(submissionId);
       setSubmission(data);
     };
-    fetch();
+    fetch().catch((error: unknown) => setError(requestError(error)));
   }, [submissionId]);
+
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   if (!submission) return <LoadingProgress />;
 

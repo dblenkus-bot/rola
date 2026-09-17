@@ -1,93 +1,64 @@
-import React from 'react';
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import UserService, { type LoginPayload } from '../../services/UserService';
+import {
+  loadToken,
+  sessionChanged,
+  type AuthToken,
+} from '../../services/token';
 
-import { isEmpty } from 'lodash';
-
-import UserService, { LoginPayload } from '../../services/UserService';
-
-interface AuthProviderProps {
-  children: React.ReactNode;
+interface AuthContext {
+  user: AuthToken | null;
+  login: (payload: LoginPayload) => Promise<void>;
+  logout: () => void;
+  isLoggedIn: () => boolean;
 }
 
-interface AuthProviderState {
-  user: {} | { token: string; expires: string };
-}
-
-export const userContext = React.createContext({
-  user: {},
-  login: (payload: LoginPayload) => {},
-  logout: () => {},
-  isLoggedIn: (): boolean => {
-    return false;
+export const userContext = createContext<AuthContext>({
+  user: null,
+  login: async () => {
+    throw new Error('AuthProvider is missing');
   },
+  logout: () => {
+    throw new Error('AuthProvider is missing');
+  },
+  isLoggedIn: () => false,
 });
 
-class AuthProvider extends React.Component<
-  AuthProviderProps,
-  AuthProviderState
-> {
-  state = {
-    user: {},
-  };
-
-  constructor(props: AuthProviderProps) {
-    super(props);
-
-    this.state = { user: this.loadData() };
-  }
-
-  saveData = (data: any) => {
-    localStorage.setItem('token', JSON.stringify(data));
-  };
-
-  loadData = () => {
-    const tokenString = localStorage.getItem('token');
-    if (!tokenString) return {};
-
-    let user = {};
-    let removeLocalData = false;
-    try {
-      const token = JSON.parse(tokenString);
-
-      const expireTimestamp = new Date(token.expires).getTime();
-      const nowTimestamp = new Date().getTime();
-      const deltaHour = 1000 * 60 * 60;
-
-      // Logout user if token expires in less than 6 hours.
-      if (nowTimestamp + 6 * deltaHour < expireTimestamp) user = token;
-      else removeLocalData = true;
-    } catch {
-      removeLocalData = true;
-    }
-    if (removeLocalData) localStorage.removeItem('token');
-    return user;
-  };
-
-  login = async (payload: LoginPayload): Promise<void> => {
-    const { data } = await UserService.login(payload);
-    this.setState({ user: data });
-    this.saveData(data);
-  };
-
-  logout = () => {
-    this.setState({ user: {} });
-    localStorage.removeItem('token');
-  };
-
-  isLoggedIn = (): boolean => !isEmpty(this.state.user);
-
-  render() {
-    const context = {
-      user: this.state.user,
-      login: this.login,
-      logout: this.logout,
-      isLoggedIn: this.isLoggedIn,
+export default function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState(loadToken);
+  useEffect(() => {
+    const refreshSession = () => setUser(loadToken());
+    window.addEventListener(sessionChanged, refreshSession);
+    window.addEventListener('storage', refreshSession);
+    return () => {
+      window.removeEventListener(sessionChanged, refreshSession);
+      window.removeEventListener('storage', refreshSession);
     };
-    return (
-      <userContext.Provider value={context}>
-        {this.props.children}
-      </userContext.Provider>
-    );
-  }
+  }, []);
+  const login = useCallback(async (payload: LoginPayload) => {
+    const { data } = await UserService.login(payload);
+    localStorage.setItem('token', JSON.stringify(data));
+    setUser(data);
+  }, []);
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    setUser(null);
+  }, []);
+  const value = useMemo(
+    () => ({
+      user,
+      login,
+      logout,
+      isLoggedIn: () => user !== null && Date.parse(user.expires) > Date.now(),
+    }),
+    [user, login, logout],
+  );
+  return <userContext.Provider value={value}>{children}</userContext.Provider>;
 }
-
-export default AuthProvider;

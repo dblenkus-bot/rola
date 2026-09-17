@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import React, { CSSProperties, useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import _ from 'lodash';
@@ -23,6 +25,8 @@ interface RouteMatchParams {
 }
 
 const ThemeResults: React.FC = () => {
+  const [error, setError] = useState<string | null>(null);
+  const [resultsLoaded, setResultsLoaded] = useState(false);
   const [submissionsByAuthor, setSubmissionsByAuthor] = useState<
     ResultsSubmission[][]
   >([]);
@@ -39,6 +43,7 @@ const ThemeResults: React.FC = () => {
   useEffect(() => {
     const fetch = async (): Promise<void> => {
       const { data } = await ResultsThemeService.getResults(themeId);
+      setResultsLoaded(true);
       setSubmissionsByAuthor(
         _.chain(data.submissions)
           .groupBy('author.id')
@@ -47,7 +52,7 @@ const ThemeResults: React.FC = () => {
           .value(),
       );
     };
-    fetch();
+    fetch().catch((error: unknown) => setError(requestError(error)));
   }, [themeId]);
 
   useEffect(() => {
@@ -55,7 +60,7 @@ const ThemeResults: React.FC = () => {
       const { data } = await ContestService.getContest(contestId);
       setContest(data);
     };
-    fetchContest();
+    fetchContest().catch((error: unknown) => setError(requestError(error)));
   }, [contestId]);
 
   const getAuthor = (submissions: ResultsSubmission[]): ResultsAuthor => {
@@ -123,7 +128,10 @@ const ThemeResults: React.FC = () => {
       />
     );
 
-  if (!submissionsByAuthor.length || !contest) return <LoadingProgress />;
+  if (error) return <Alert severity="error">{error}</Alert>;
+  if (!resultsLoaded || !contest) return <LoadingProgress />;
+  if (!submissionsByAuthor.length)
+    return <Typography>No published results.</Typography>;
 
   return (
     <>

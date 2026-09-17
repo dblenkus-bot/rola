@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../services/errors';
 import { useParams } from 'react-router-dom';
 import type { AppDispatch } from '../store';
 import React from 'react';
@@ -30,15 +32,24 @@ interface UploadViewProps extends PropsFromRedux {
 }
 
 class UploadView extends React.Component<UploadViewProps> {
-  async componentDidMount() {
-    const { uploadInit } = this.props;
-    const { contestId } = this.props.match.params;
-    const { data: contest } = await ContestService.getContest(contestId);
+  state = { error: null as string | null };
 
-    uploadInit(contest);
+  async componentDidMount() {
+    this.setState({ error: null });
+    try {
+      const { uploadInit } = this.props;
+      const { contestId } = this.props.match.params;
+      const { data: contest } = await ContestService.getContest(contestId);
+
+      uploadInit(contest);
+    } catch (error) {
+      this.setState({ error: requestError(error) });
+    }
   }
 
   render(): React.ReactNode {
+    if (this.state.error)
+      return <Alert severity="error">{this.state.error}</Alert>;
     const {
       contest,
       handleAuthorChange,
@@ -83,7 +94,8 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
     submission_id: number,
     image_id: number,
     payload: { file: File | undefined },
-  ): void => dispatch(imageUpdate(theme_id, submission_id, image_id, payload)),
+  ): Promise<void> =>
+    dispatch(imageUpdate(theme_id, submission_id, image_id, payload)),
   handleSubmit: () => dispatch(uploadSubmit()),
 });
 

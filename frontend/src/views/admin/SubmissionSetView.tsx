@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import { useParams } from 'react-router-dom';
 import React from 'react';
 
@@ -20,6 +22,7 @@ interface SubmissionListProps extends WithTranslation {
 }
 
 interface SubmissionListState {
+  error: string | null;
   contest: Contest | null;
   submissionSet: SubmissionSet | null;
 }
@@ -32,6 +35,7 @@ class SubmissionList extends React.Component<
     super(props);
 
     this.state = {
+      error: null,
       contest: null,
       submissionSet: null,
     };
@@ -53,19 +57,26 @@ class SubmissionList extends React.Component<
   };
 
   async fetchData(): Promise<void> {
-    const {
-      match: {
-        params: { contestId, submissionSetId },
-      },
-    } = this.props;
+    this.setState({ error: null });
+    try {
+      const {
+        match: {
+          params: { contestId, submissionSetId },
+        },
+      } = this.props;
 
-    const { data: contest } = await ContestService.getContest(contestId);
-    const { data: submissionSet } =
-      await SubmissionSetService.getSubmissionSet(submissionSetId);
-    this.setState({ contest, submissionSet });
+      const { data: contest } = await ContestService.getContest(contestId);
+      const { data: submissionSet } =
+        await SubmissionSetService.getSubmissionSet(submissionSetId);
+      this.setState({ contest, submissionSet });
+    } catch (error) {
+      this.setState({ error: requestError(error) });
+    }
   }
 
   render(): React.ReactNode {
+    if (this.state.error)
+      return <Alert severity="error">{this.state.error}</Alert>;
     const { contest, submissionSet } = this.state;
     const { t } = this.props;
 

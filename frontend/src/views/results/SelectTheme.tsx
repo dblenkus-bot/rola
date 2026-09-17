@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
@@ -29,13 +31,17 @@ const SelectTheme: React.FC = () => {
 
   const { t } = useTranslation();
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchContest = async (): Promise<void> => {
       const { data } = await ContestService.getContest(contestId);
       setContest(data);
     };
-    fetchContest();
+    fetchContest().catch((error: unknown) => setError(requestError(error)));
   }, [contestId]);
+
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   if (!contest) return <LoadingProgress />;
 

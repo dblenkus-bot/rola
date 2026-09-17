@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -18,13 +20,17 @@ const SelectTheme: React.FC = () => {
   const [contests, setContests] = useState<JuryContest[]>([]);
   const { t } = useTranslation();
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchContests = async (): Promise<void> => {
       const { data } = await JudgeContestService.getContests();
       setContests(data.results);
     };
-    fetchContests();
+    fetchContests().catch((error: unknown) => setError(requestError(error)));
   }, []);
+
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
     <TableContainer component={Paper}>

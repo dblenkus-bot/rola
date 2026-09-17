@@ -1,38 +1,19 @@
+import type { components } from '../types/generated-api';
 import { AxiosPromise } from 'axios';
 
 import { apiClient } from './Base';
+import type { AuthToken } from './token';
 
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export interface RegisterPayload {
-  first_name: string;
-  last_name: string;
-  email: string;
-  password: string;
-  address: string;
-  city: string;
-  postal_code: string;
-  country: string;
-}
-
-export interface ActivateUserPayload {
-  token: string;
-}
-
-export interface RequestPasswordResetPayload {
-  email: string;
-}
-
-export interface PasswordResetPayload {
-  new_password: string;
-  token: string;
-}
+type Schemas = components['schemas'];
+export type LoginPayload = Schemas['LoginRequest'];
+export type RegisterPayload = Schemas['UserRequest'];
+export type ActivateUserPayload = Schemas['ActivationRequest'];
+export type RequestPasswordResetPayload =
+  Schemas['RequestPasswordResetRequest'];
+export type PasswordResetPayload = Schemas['PasswordResetRequest'];
 
 export default {
-  login(payload: LoginPayload): AxiosPromise {
+  login(payload: LoginPayload): AxiosPromise<AuthToken> {
     return apiClient.post('/user/login', payload);
   },
   register(payload: RegisterPayload): AxiosPromise {

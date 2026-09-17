@@ -1,3 +1,6 @@
+import { Alert } from '@mui/material';
+import LoadingProgress from '../LoadingProgress';
+import { requestError } from '../../services/errors';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AxiosPromise } from 'axios';
@@ -35,8 +38,11 @@ const SubmissionSetTable: React.FC<SubmissionSetTableProps> = ({
   dataSource,
   onDelete,
 }: SubmissionSetTableProps) => {
+  const [error, setError] = useState<string | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const {
+    error: paginationError,
+    isLoading,
     data: submissionSets,
     count,
     page,
@@ -58,7 +64,7 @@ const SubmissionSetTable: React.FC<SubmissionSetTableProps> = ({
   }, [submissionSets]);
 
   useEffect(() => {
-    fetchPayments();
+    fetchPayments().catch((error: unknown) => setError(requestError(error)));
   }, [fetchPayments]);
 
   const handlePageChange = (
@@ -78,8 +84,12 @@ const SubmissionSetTable: React.FC<SubmissionSetTableProps> = ({
     submissionSetId: number,
     paid: boolean,
   ): Promise<void> => {
-    await PaymentService.updatePayment(submissionSetId, paid);
-    await fetchPayments();
+    try {
+      await PaymentService.updatePayment(submissionSetId, paid);
+      await fetchPayments();
+    } catch (error) {
+      setError(requestError(error));
+    }
   };
 
   const getLabelDisplayedRows = ({
@@ -89,6 +99,10 @@ const SubmissionSetTable: React.FC<SubmissionSetTableProps> = ({
   }: LabelDisplayedRowsArgs): React.ReactNode => {
     return t('displayed_rows', { from, to, total });
   };
+
+  if (error || paginationError)
+    return <Alert severity="error">{error || paginationError}</Alert>;
+  if (isLoading) return <LoadingProgress />;
 
   return (
     <>

@@ -1,3 +1,4 @@
+import { requestError } from './errors';
 import { AxiosPromise } from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -11,6 +12,8 @@ interface PaginationProps<R> {
 }
 
 interface PaginationReturn<R> {
+  error: string | null;
+  isLoading: boolean;
   data: R[];
   count: number;
   page: number;
@@ -22,18 +25,33 @@ interface PaginationReturn<R> {
 function usePagination<R extends BaseResource>({
   source,
 }: PaginationProps<R>): PaginationReturn<R> {
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setLoading] = useState(true);
   const [data, setData] = useState<R[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
-    const fetchData = async (): Promise<void> => {
-      const { data: respondeData } = await source(page, pageSize);
-      setData(respondeData.results);
-      setCount(respondeData.count);
+    let active = true;
+    setError(null);
+    setLoading(true);
+    source(page, pageSize)
+      .then(({ data }) => {
+        if (active) {
+          setData(data.results);
+          setCount(data.count);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) setError(requestError(error));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
     };
-    fetchData();
   }, [source, page, pageSize]);
 
   const changePage = (pageNumber: number): void => setPage(pageNumber);
@@ -43,7 +61,16 @@ function usePagination<R extends BaseResource>({
     setPage(1);
   };
 
-  return { data, count, page, pageSize, changePage, changePageSize };
+  return {
+    error,
+    isLoading,
+    data,
+    count,
+    page,
+    pageSize,
+    changePage,
+    changePageSize,
+  };
 }
 
 export default usePagination;

@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import { useParams } from 'react-router-dom';
 import React from 'react';
 import { AxiosPromise } from 'axios';
@@ -25,6 +27,7 @@ interface RouteMatchParams {
 }
 
 interface SubmissionSetListState {
+  error: string | null;
   contest: Contest | null;
   pendingSubmissionSet: SubmissionSet | null;
   showDialog: boolean;
@@ -42,6 +45,7 @@ class SubmissionSetList extends React.Component<
     super(props);
 
     this.state = {
+      error: null,
       contest: null,
       pendingSubmissionSet: null,
       showDialog: false,
@@ -53,15 +57,20 @@ class SubmissionSetList extends React.Component<
   }
 
   fetchData = async (): Promise<void> => {
-    const {
-      match: {
-        params: { contestId },
-      },
-    } = this.props;
+    this.setState({ error: null });
+    try {
+      const {
+        match: {
+          params: { contestId },
+        },
+      } = this.props;
 
-    const { data: contest } = await ContestService.getContest(contestId);
+      const { data: contest } = await ContestService.getContest(contestId);
 
-    this.setState({ contest });
+      this.setState({ contest });
+    } catch (error) {
+      this.setState({ error: requestError(error) });
+    }
   };
 
   handleDelete = (pendingSubmissionSet: SubmissionSet): void => {
@@ -72,14 +81,21 @@ class SubmissionSetList extends React.Component<
     this.setState({ pendingSubmissionSet: null, showDialog: false });
 
   processDelete = async (): Promise<void> => {
-    const { pendingSubmissionSet } = this.state;
-    if (!pendingSubmissionSet) return;
+    this.setState({ error: null });
+    try {
+      const { pendingSubmissionSet } = this.state;
+      if (!pendingSubmissionSet) return;
 
-    await SubmissionSetService.deleteSubmissionSet(pendingSubmissionSet.id);
-    await this.fetchData();
+      await SubmissionSetService.deleteSubmissionSet(pendingSubmissionSet.id);
+      await this.fetchData();
+    } catch (error) {
+      this.setState({ error: requestError(error) });
+    }
   };
 
   render(): React.ReactNode {
+    if (this.state.error)
+      return <Alert severity="error">{this.state.error}</Alert>;
     const { contest, showDialog } = this.state;
     const { t } = this.props;
 

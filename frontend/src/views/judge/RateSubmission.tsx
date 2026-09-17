@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   useNavigate,
@@ -39,6 +41,7 @@ const RateSubmission: React.FC<PropsFromRedux> = ({
   nextSubmission,
   previousSubmission,
 }: PropsFromRedux) => {
+  const [error, setError] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [close, setClose] = useState(false);
 
@@ -66,13 +69,19 @@ const RateSubmission: React.FC<PropsFromRedux> = ({
 
   const updateRating = async (newRating: number): Promise<void> => {
     if (!submission) return;
-    setRating(newRating);
-    await RatingService.updateForSubmission(submission.id, newRating);
-    if (isNext) nextSubmission();
+    try {
+      await RatingService.updateForSubmission(submission.id, newRating);
+      setRating(newRating);
+      if (isNext) nextSubmission();
+    } catch (error) {
+      setError(requestError(error));
+    }
   };
 
   useEffect(() => {
-    initialize(contestId, themeId, submissionId.current);
+    initialize(contestId, themeId, submissionId.current).catch(
+      (error: unknown) => setError(requestError(error)),
+    );
   }, [contestId, themeId, initialize]);
 
   useEffect(() => {
@@ -83,7 +92,7 @@ const RateSubmission: React.FC<PropsFromRedux> = ({
   }, [navigate, submission]);
 
   useEffect(() => {
-    fetchRaiting();
+    fetchRaiting().catch((error: unknown) => setError(requestError(error)));
   }, [fetchRaiting]);
 
   useKeyPress((value: string) => {
@@ -101,6 +110,8 @@ const RateSubmission: React.FC<PropsFromRedux> = ({
 
   if (close)
     return <Navigate to={`/judge/contest/${contestId}/theme/${themeId}`} />;
+
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   if (isLoading || !submission) return <LoadingProgress />;
 
@@ -133,7 +144,8 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
     contestId: string,
     themeId: string,
     submissionId: number | undefined,
-  ): void => dispatch(initializeStore(contestId, themeId, submissionId)),
+  ): Promise<void> =>
+    dispatch(initializeStore(contestId, themeId, submissionId)),
   previousSubmission: () => dispatch(setPreviousSubmission()),
   nextSubmission: () => dispatch(setNextSubmission()),
 });

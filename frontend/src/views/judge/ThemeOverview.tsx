@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../../services/errors';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -19,13 +21,17 @@ const ThemeOverview: React.FC = () => {
 
   const [submissions, setSubmissions] = useState<null | ResultsSubmission[]>();
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetch = async (): Promise<void> => {
       const { data } = await ResultsSubmissionService.getOverview(themeId);
       setSubmissions(data.results);
     };
-    fetch();
+    fetch().catch((error: unknown) => setError(requestError(error)));
   }, [themeId]);
+
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   if (!submissions) return <LoadingProgress />;
 

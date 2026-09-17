@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../services/errors';
 import { Grid, Typography } from '@material-ui/core';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -16,13 +18,17 @@ const UploadConfirmView: React.FC = () => {
   const [contest, setContest] = useState<Contest | null>(null);
   const { contestId } = useParams<RouteMatchParams>();
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect((): void => {
     const fetchContest = async (): Promise<void> => {
       const { data } = await ContestService.getContest(contestId);
       setContest(data);
     };
-    fetchContest();
+    fetchContest().catch((error: unknown) => setError(requestError(error)));
   }, [contestId]);
+
+  if (error) return <Alert severity="error">{error}</Alert>;
 
   if (!contest) return <LoadingProgress />;
 

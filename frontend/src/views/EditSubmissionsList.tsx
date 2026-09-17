@@ -1,3 +1,5 @@
+import { Alert } from '@mui/material';
+import { requestError } from '../services/errors';
 import React from 'react';
 
 import { groupBy, sum } from 'lodash';
@@ -33,6 +35,7 @@ type StyleProps = {
 interface EditSubmissionListProps extends StyleProps, WithTranslation {}
 
 interface EditSubmissionsListState {
+  error: string | null;
   contests: Contest[];
   submissions: Submission[];
   showDialog: boolean;
@@ -52,6 +55,7 @@ class EditSubmissionsList extends React.Component<
   EditSubmissionsListState
 > {
   state: EditSubmissionsListState = {
+    error: null,
     contests: [],
     submissions: [],
     showDialog: false,
@@ -59,19 +63,24 @@ class EditSubmissionsList extends React.Component<
   };
 
   async fetchSubmissions() {
-    const getContestSubmissions = async (contest: Contest) => {
-      const submissionsResp = await SubmissionService.getSubmissionsByContest(
-        contest.id,
-      );
-      return submissionsResp.data.results;
-    };
+    this.setState({ error: null });
+    try {
+      const getContestSubmissions = async (contest: Contest) => {
+        const submissionsResp = await SubmissionService.getSubmissionsByContest(
+          contest.id,
+        );
+        return submissionsResp.data.results;
+      };
 
-    const contests = (await ContestService.getActiveContests()).data.results;
-    const submissions = (
-      await asyncMap(contests, getContestSubmissions)
-    ).flat();
+      const contests = (await ContestService.getActiveContests()).data.results;
+      const submissions = (
+        await asyncMap(contests, getContestSubmissions)
+      ).flat();
 
-    this.setState({ contests, submissions });
+      this.setState({ contests, submissions });
+    } catch (error) {
+      this.setState({ error: requestError(error) });
+    }
   }
 
   async componentDidMount() {
@@ -92,13 +101,20 @@ class EditSubmissionsList extends React.Component<
   closeDialog = () => this.setState({ showDialog: false });
 
   processDelete = async () => {
-    await asyncMap(this.state.pendingSubmissions, (submission) =>
-      SubmissionService.deleteSubmission(submission.id),
-    );
-    this.fetchSubmissions();
+    this.setState({ error: null });
+    try {
+      await asyncMap(this.state.pendingSubmissions, (submission) =>
+        SubmissionService.deleteSubmission(submission.id),
+      );
+      this.fetchSubmissions();
+    } catch (error) {
+      this.setState({ error: requestError(error) });
+    }
   };
 
   render() {
+    if (this.state.error)
+      return <Alert severity="error">{this.state.error}</Alert>;
     const { t } = this.props;
     const classes = withStyles.getClasses(this.props);
 
