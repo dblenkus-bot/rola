@@ -1,8 +1,11 @@
+"""Create and validate signed account email tokens."""
+
 import logging
-import os
+from urllib.parse import urlencode
+
+from django.conf import settings
 
 from django.core import signing
-from django.urls import reverse
 from django.template.loader import render_to_string
 from rest_framework import exceptions
 
@@ -37,68 +40,41 @@ def generate_reset_token(user):
     return _generate_token(token_generator, user, PASSWORD_RESET_SALT)
 
 
-def _send_user_email(
-    subject_template_name,
-    email_template_name,
-    token,
-    user,
-    url,
-    html_email_template_name=None,
-):
-    """Send user-related e-mail with security token."""
-
+def _send_user_email(user, request, template, path, token):
+    base_url = settings.ROLA_FRONTEND_URL.rstrip("/") or request.build_absolute_uri(
+        "/"
+    ).rstrip("/")
     context = {
-        "first_name": user.first_name,
+        "first_name": user.first_name or "",
         "app_name": drf_user_settings.APP_NAME,
-        "url": "{}?token={}".format(url, token),
+        "url": f"{base_url}{path}?{urlencode({'token': token})}",
     }
-
-    subject = render_to_string(subject_template_name, context)
-    subject = "".join(subject.splitlines())
-    body = render_to_string(email_template_name, context)
-    html_body = render_to_string(html_email_template_name, context)
-
-    email_kwargs = {}
-    if html_body:
-        email_kwargs["html_message"] = html_body
-
+    subject = "".join(
+        render_to_string(f"drf_user/{template}/email_subject.txt", context).splitlines()
+    )
+    body = render_to_string(f"drf_user/{template}/email_body.txt", context)
+    html_body = render_to_string(f"drf_user/{template}/email_body.html", context)
     try:
-        user.email_user(subject, body, **email_kwargs)
+        user.email_user(subject, body, html_message=html_body)
     except Exception:
-        logger.exception("Error while sending e-mail for user '{}'.".format(user.email))
+        logger.error("Unable to send account email.")
 
 
 def send_activation_email(user, request):
-    """Send activation e-mail for a given user."""
+    """Send an activation link pointing to the configured frontend."""
     _send_user_email(
-        subject_template_name=os.path.join(
-            "drf_user", "registration", "email_subject.txt"
-        ),
-        email_template_name=os.path.join("drf_user", "registration", "email_body.txt"),
-        token=generate_activation_token(user),
-        user=user,
-        url=request.build_absolute_uri(reverse("activate-user")),
-        html_email_template_name=os.path.join(
-            "drf_user", "registration", "email_body.html"
-        ),
+        user,
+        request,
+        "registration",
+        "/register/activate",
+        generate_activation_token(user),
     )
 
 
 def send_reset_email(user, request):
-    """Send reset password e-mail."""
+    """Send a recovery link pointing to the configured frontend."""
     _send_user_email(
-        subject_template_name=os.path.join(
-            "drf_user", "password_reset", "email_subject.txt"
-        ),
-        email_template_name=os.path.join(
-            "drf_user", "password_reset", "email_body.txt"
-        ),
-        token=generate_reset_token(user),
-        user=user,
-        url=request.build_absolute_uri(reverse("password-reset")),
-        html_email_template_name=os.path.join(
-            "drf_user", "password_reset", "email_body.html"
-        ),
+        user, request, "password_reset", "/password-reset", generate_reset_token(user)
     )
 
 

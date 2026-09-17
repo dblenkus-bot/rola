@@ -1,6 +1,7 @@
 import re
 import time
 from unittest.mock import Mock, patch
+from urllib.parse import unquote
 
 from django.core import mail
 from django.db.models import F
@@ -8,7 +9,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from drf_user.models import User, Token
+from drf_user.models import Token, User
 from drf_user.settings import drf_user_settings
 from drf_user.utils.signing import generate_activation_token, generate_reset_token
 
@@ -39,6 +40,10 @@ class UserManagementTest(APITestCase):
             "last_name": "Novak",
             "email": "janez@example.com",
             "password": "p4ssWord123",
+            "address": "Test Street 1",
+            "city": "Ljubljana",
+            "postal_code": "1000",
+            "country": "SI",
         }
 
         cls.list_url = reverse("user-list")
@@ -52,36 +57,44 @@ class UserManagementTest(APITestCase):
         self.assertEqual(response.data["count"], 0)
 
     def test_list_user(self):
-        self.client.credentials(
-            HTTP_AUTHORIZATION="Token {}".format(self.user_token.key)
-        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.user_token.key}")
 
         response = self.client.get(self.list_url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
 
         result = response.data["results"][0]
-        self.assertCountEqual(result.keys(), ["id", "first_name", "last_name", "email"])
+        self.assertCountEqual(
+            result.keys(),
+            [
+                "id",
+                "first_name",
+                "last_name",
+                "email",
+                "address",
+                "city",
+                "postal_code",
+                "country",
+            ],
+        )
         self.assertEqual(result["id"], str(self.user.id))
         self.assertEqual(result["email"], self.user.email)
         self.assertEqual(result["first_name"], self.user.first_name)
         self.assertEqual(result["last_name"], self.user.last_name)
 
-        response = self.client.get("{}?current=1".format(self.list_url), format="json")
+        response = self.client.get(f"{self.list_url}?current=1", format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.user.id))
 
     def test_list_admin(self):
-        self.client.credentials(
-            HTTP_AUTHORIZATION="Token {}".format(self.admin_token.key)
-        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.admin_token.key}")
 
         response = self.client.get(self.list_url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 2)
 
-        response = self.client.get("{}?current=1".format(self.list_url), format="json")
+        response = self.client.get(f"{self.list_url}?current=1", format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], str(self.admin.id))
@@ -94,9 +107,7 @@ class UserManagementTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_get_user(self):
-        self.client.credentials(
-            HTTP_AUTHORIZATION="Token {}".format(self.user_token.key)
-        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.user_token.key}")
 
         response = self.client.get(self.user_detail_url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -109,9 +120,7 @@ class UserManagementTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_get_user_admin(self):
-        self.client.credentials(
-            HTTP_AUTHORIZATION="Token {}".format(self.admin_token.key)
-        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.admin_token.key}")
 
         response = self.client.get(self.user_detail_url, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -122,7 +131,8 @@ class UserManagementTest(APITestCase):
         self.assertEqual(response.data["id"], str(self.admin.id))
 
     def test_create_user(self):
-        response = self.client.post(self.list_url, self.post_data, format="json")
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(self.list_url, self.post_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         user = User.objects.get(id=response.data["id"])
@@ -134,8 +144,8 @@ class UserManagementTest(APITestCase):
         match = re.search(
             r"(?P<url>https?://.*\?token=(?P<token>.*))$", mail.outbox[0].body
         )
-        token = match.group("token")
-        self.assertIn(self.activate_account_url, match.group("url"))
+        token = unquote(match.group("token"))
+        self.assertIn("/register/activate?", match.group("url"))
 
         response = self.client.post(
             self.activate_account_url, {"token": token}, format="json"
@@ -231,9 +241,7 @@ class ChangePasswordTest(APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.client.credentials(
-            HTTP_AUTHORIZATION="Token {}".format(self.user_token.key)
-        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.user_token.key}")
 
     def test_reset_password(self):
         new_password = "n3wp4ss!"
@@ -310,11 +318,12 @@ class ResetPasswordTest(APITestCase):
     def test_reset_password(self):
         new_password = "n3wp4ss!"
 
-        response = self.client.post(
-            self.request_reset_password_url,
-            {"email": self.USER_EMAIL},
-            format="json",
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                self.request_reset_password_url,
+                {"email": self.USER_EMAIL},
+                format="json",
+            )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(len(mail.outbox), 1)
@@ -322,8 +331,8 @@ class ResetPasswordTest(APITestCase):
         match = re.search(
             r"(?P<url>https?://.*\?token=(?P<token>.*))$", mail.outbox[0].body
         )
-        token = match.group("token")
-        self.assertIn(self.reset_password_url, match.group("url"))
+        token = unquote(match.group("token"))
+        self.assertIn("/password-reset?", match.group("url"))
 
         response = self.client.post(
             self.reset_password_url,
