@@ -1,0 +1,84 @@
+name: rola-production
+
+x-backend: &backend
+  build:
+    context: ./backend
+  env_file: .env
+  environment:
+    ROLA_DEBUG: "false"
+    ROLA_SECRET_KEY: ${ROLA_SECRET_KEY:?Set ROLA_SECRET_KEY}
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS:?Set ALLOWED_HOSTS}
+    ROLA_FRONTEND_URL: ${ROLA_FRONTEND_URL:?Set ROLA_FRONTEND_URL}
+    ROLA_TRUST_PROXY: "true"
+    ROLA_NUM_PROXIES: ${ROLA_NUM_PROXIES:-2}
+    ROLA_POSTGRESQL_HOST: db
+    ROLA_POSTGRESQL_PORT: "5432"
+    ROLA_POSTGRESQL_NAME: rola
+    ROLA_POSTGRESQL_USER: rola
+    ROLA_POSTGRESQL_PASSWORD: ${ROLA_POSTGRESQL_PASSWORD:?Set ROLA_POSTGRESQL_PASSWORD}
+    ROLA_REDIS_HOST: redis
+    ROLA_REDIS_PORT: "6379"
+    ROLA_MEDIA_ROOT: /storage/media
+    ROLA_STATIC_ROOT: /storage/static
+  volumes:
+    - media:/storage/media
+    - static:/storage/static
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: rola
+      POSTGRES_USER: rola
+      POSTGRES_PASSWORD: ${ROLA_POSTGRESQL_PASSWORD:?Set ROLA_POSTGRESQL_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U rola -d rola"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.10.1-alpine
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  backend:
+    <<: *backend
+    restart: unless-stopped
+
+  worker:
+    <<: *backend
+    profiles: [backup]
+    command: [python, manage.py, runworker, rolca.backup]
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:-}
+    ports:
+      - "127.0.0.1:${ROLA_PORT:-8080}:80"
+    volumes:
+      - media:/storage/media:ro
+      - static:/storage/static:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media:
+  static:

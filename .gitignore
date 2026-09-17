@@ -1,33 +1,30 @@
-# Ignore temporary editor files.
+.DS_Store
 .*.sw[po]
 *~
-.DS_Store
-
-# Ignore project files
-*.pyproj
-*.sublime-project
-*.sublime-workspace
-sftp-config.json
-.idea
-
-# Python virtual environment.
-/.venv/
-
-# Test files.
-.pytest_cache/
-
-# Ignore binaries.
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+.venv*/
+__pycache__/
 *.py[cod]
-*.so
-*.dll
-
-# Tox files
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .tox/
-
-# ignore Coverage.py files
-.coverage
+.coverage*
+coverage.xml
 htmlcov/
-
-# Media and static directories.
-/media/
-/static/
+build/
+dist/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+backend/media/
+backend/static/
+backend/tests/media/
+*.sqlite3
+docs/_build/

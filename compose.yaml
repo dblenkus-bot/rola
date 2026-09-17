@@ -1,0 +1,88 @@
+name: rola
+
+x-backend: &backend
+  build:
+    context: ./backend
+    target: development
+  environment: &backend-environment
+    ROLA_SECRET_KEY: ${ROLA_SECRET_KEY:?Set ROLA_SECRET_KEY in .env}
+    ROLA_DEBUG: "true"
+    ROLA_FRONTEND_URL: http://localhost:${ROLA_PORT:-8080}
+    ALLOWED_HOSTS: localhost,127.0.0.1,backend
+    ROLA_POSTGRESQL_HOST: db
+    ROLA_POSTGRESQL_PORT: "5432"
+    ROLA_POSTGRESQL_NAME: rola
+    ROLA_POSTGRESQL_USER: rola
+    ROLA_POSTGRESQL_PASSWORD: ${ROLA_POSTGRESQL_PASSWORD:?Set ROLA_POSTGRESQL_PASSWORD in .env}
+    ROLA_REDIS_HOST: redis
+    ROLA_REDIS_PORT: "6379"
+    ROLA_MEDIA_ROOT: /storage/media
+    ROLA_STATIC_ROOT: /storage/static
+  volumes:
+    - ./backend:/app
+    - media:/storage/media
+    - static:/storage/static
+
+services:
+  db:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: rola
+      POSTGRES_USER: rola
+      POSTGRES_PASSWORD: ${ROLA_POSTGRESQL_PASSWORD:?Set ROLA_POSTGRESQL_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${ROLA_DB_PORT:-55432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U rola -d rola"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:8.10.1-alpine
+    ports:
+      - "127.0.0.1:${ROLA_REDIS_PORT:-56379}:6379"
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  migrate:
+    <<: *backend
+    command: [python, manage.py, migrate, --noinput]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    <<: *backend
+    command: [python, manage.py, runserver, "0.0.0.0:8000"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+      VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID:-}
+    ports:
+      - "127.0.0.1:${ROLA_PORT:-8080}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  media:
+  static:
+  frontend_modules:

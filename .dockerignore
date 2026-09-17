@@ -1,4 +1,11 @@
-/.git
-/.venv
-/frontend/.git
-/frontend/node_modules
+.git
+.env
+.env.*
+**/.venv*
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/dist
+**/media
+**/static
+docs/_build
