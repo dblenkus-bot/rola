@@ -11,7 +11,7 @@ from rolca.payment.models import Payment
 class PaymentViewSet(viewsets.ModelViewSet):
     """API viewset for Payment objects."""
 
-    queryset = Payment.objects.all()
+    queryset = Payment.objects.order_by("pk")
     serializer_class = PaymentSerializer
     permission_classes = (IsSuperUser,)
     filterset_class = PaymentFilter

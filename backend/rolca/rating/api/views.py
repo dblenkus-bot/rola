@@ -12,7 +12,7 @@ from rolca.integration import author_select_related
 from rolca.rating.api.filters import RatingFilter
 from rolca.rating.api.permissions import CanModifyRating, IsActiveJudge
 from rolca.rating.api.serializers import (
-    ContestSerializer,
+    JudgeContestSerializer,
     RatingSerializer,
     SubmissionResultsSerializer,
     ThemeResultsSerializer,
@@ -30,7 +30,7 @@ class RatingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Restrict ratings to the requesting user."""
-        return Rating.objects.filter(user=self.request.user)
+        return Rating.objects.filter(user=self.request.user).order_by("pk")
 
 
 class SubmissionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -66,7 +66,7 @@ class ContestViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     """List contests assigned to the requesting judge."""
 
     queryset = Contest.objects.all()
-    serializer_class = ContestSerializer
+    serializer_class = JudgeContestSerializer
     filterset_class = ContestFilter
     permission_classes = (IsActiveJudge,)
 
@@ -87,6 +87,7 @@ def _result_submissions():
             "theme__results", "author__reward", *author_select_related("author")
         )
         .prefetch_related("files", "reward")
+        .order_by("pk")
     )
 
 

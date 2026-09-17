@@ -387,6 +387,8 @@ def test_results_hide_before_publication_and_handle_optional_relations(world):
     assert response.status_code == 200, response.data
     assert rows(response)[0]["accepted"] is True
     assert rows(response)[0]["author"]["country"] is None
+    assert rows(response)[0]["author"]["reward"] is None
+    assert rows(response)[0]["author"]["reward_theme"] is None
     assert rows(response)[0]["author"]["email"] is None
     assert rows(response)[0]["reward_kind"] == "Gold"
 

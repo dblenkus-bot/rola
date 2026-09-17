@@ -232,7 +232,7 @@ class ThemeSerializer(BaseSerializer):
             "submissions_number",
         ]
 
-    def get_submissions_number(self, theme):
+    def get_submissions_number(self, theme) -> int:
         """Count submissions in this theme."""
         return theme.submission_set.count()
 

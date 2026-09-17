@@ -61,7 +61,7 @@ class FileViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 class InstitutionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     """List institutions with optional filters."""
 
-    queryset = Institution.objects.all()
+    queryset = Institution.objects.order_by("pk")
     serializer_class = InstitutionSerializer
     filterset_class = InstitutionFilter
 

@@ -79,6 +79,12 @@ def test_published_results_preload_host_country(world, django_assert_max_num_que
     with django_assert_max_num_queries(4):
         response = APIClient().get("/api/v1/results/submission")
     assert response.status_code == 200, response.data
+    assert response.data["results"][0]["author"]["reward_theme"] == world.theme.pk
+    assert type(response.data["results"][0]["author"]["reward_theme"]) is int
+    assert response.data["results"][1]["author"]["reward"] is None
+    assert response.data["results"][1]["author"]["reward_theme"] is None
+    result_ids = [row["id"] for row in response.data["results"]]
+    assert result_ids == sorted(result_ids)
     assert [row["author"]["country"] for row in response.data["results"]] == [
         "Slovenia"
     ] * 4
@@ -113,3 +119,22 @@ def test_historical_thumbnail_migration_handles_existing_media(world):
     with image.thumbnail.open("rb") as source, Image.open(source) as thumbnail:
         assert thumbnail.size == (400, 300)
         assert thumbnail.format == "JPEG"
+
+
+def test_payment_pagination_has_stable_primary_key_order(world):
+    from rolca.payment.models import Payment
+
+    payments = []
+    for _ in range(3):
+        group = SubmissionSet.objects.create(
+            user=world.owner, contest=world.contest, author=world.author
+        )
+        payments.append(Payment.objects.create(submissionset=group).pk)
+    world.client.force_authenticate(world.admin)
+    observed = []
+    for page in range(1, 4):
+        response = world.client.get("/api/v1/payment", {"page_size": 1, "page": page})
+        assert response.status_code == 200
+        assert response.data["count"] == 3
+        observed.append(response.data["results"][0]["id"])
+    assert observed == payments
