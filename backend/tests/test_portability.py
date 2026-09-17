@@ -4,6 +4,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
+from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.db import connection
+from django.db.migrations.loader import MigrationLoader
 
 from rolca.core.api.serializers import AuthorSerializer
 from tests.test_workflows import payload
@@ -11,6 +15,16 @@ from tests.test_workflows import world as world
 
 confirmation_callback = Mock()
 pytestmark = pytest.mark.django_db
+
+
+def test_standalone_migrations_do_not_load_host_apps():
+    if get_user_model()._meta.label != "auth.User":
+        pytest.skip("This assertion runs in the standard Django user configuration.")
+    assert not apps.is_installed("drf_user")
+    assert not apps.is_installed("rola_integration")
+    assert all(
+        key[0] != "drf_user" for key in MigrationLoader(connection).disk_migrations
+    )
 
 
 def test_confirmation_callback_failure_keeps_committed_submission(

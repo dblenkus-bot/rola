@@ -17,14 +17,14 @@ from rolca.backup.consumers import BackupConsumer
 from rolca.backup.models import FileBackup
 from rolca.backup.protocol import CHANNEL_BACKUP, TYPE_FILE
 from rolca.backup.signals import commit_signal
+from tests.factories import create_user
 from tests.test_workflows import photo
-from tests.userapp.models import User
 
 pytestmark = pytest.mark.django_db
 
 
 def test_upload_creates_jpeg_thumbnail_and_pending_backup():
-    user = User.objects.create_user(username="photographer")
+    user = create_user("photographer")
     image = photo(user)
     with image.thumbnail.open("rb") as source, Image.open(source) as thumb:
         assert thumb.size == (400, 300)
@@ -33,7 +33,7 @@ def test_upload_creates_jpeg_thumbnail_and_pending_backup():
 
 
 def test_backup_only_enqueues_after_commit(django_capture_on_commit_callbacks):
-    user = User.objects.create_user(username="photographer")
+    user = create_user("photographer")
     with patch("rolca.backup.signals.commit_signal") as enqueue:
         with django_capture_on_commit_callbacks(execute=True):
             image = photo(user)
@@ -42,7 +42,7 @@ def test_backup_only_enqueues_after_commit(django_capture_on_commit_callbacks):
 
 
 def test_backup_queue_full_leaves_pending_record(caplog):
-    image = photo(User.objects.create_user(username="photographer"))
+    image = photo(create_user("photographer"))
     backup = FileBackup.objects.get(source=image)
     with patch("rolca.backup.signals.async_to_sync") as sync:
         sync.return_value.side_effect = ChannelFull
@@ -53,7 +53,7 @@ def test_backup_queue_full_leaves_pending_record(caplog):
 
 
 def test_backup_failure_remains_retryable_then_completes():
-    image = photo(User.objects.create_user(username="photographer"))
+    image = photo(create_user("photographer"))
     backup = FileBackup.objects.get(source=image)
     message = {"file_backup_pk": backup.pk}
     with patch("rolca.backup.consumers.boto3.Session") as session:
@@ -73,7 +73,7 @@ def test_backup_failure_remains_retryable_then_completes():
 
 
 def test_triggerbackup_reconciles_missing_backup_records():
-    image = photo(User.objects.create_user(username="photographer"))
+    image = photo(create_user("photographer"))
     FileBackup.objects.all().delete()
     with patch("rolca.backup.management.commands.triggerbackup.async_to_sync") as sync:
         call_command("triggerbackup")
@@ -101,7 +101,7 @@ def test_redis_message_is_processed_by_configured_asgi_worker():
         override_settings(CHANNEL_LAYERS=layer_settings),
         patch("rolca.backup.consumers.boto3.Session") as session,
     ):
-        user = User.objects.create_user(username="photographer")
+        user = create_user("photographer")
         image = photo(user)
         backup = FileBackup.objects.get(source=image)
         layer = get_channel_layer()

@@ -16,7 +16,7 @@ DEBUG = False
 USE_TZ = True
 TIME_ZONE = "UTC"
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
-AUTH_USER_MODEL = "drf_user.User"
+AUTH_USER_MODEL = "auth.User"
 
 MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -37,7 +37,6 @@ INSTALLED_APPS = (
     "django.contrib.staticfiles",
     "django_filters",
     "rest_framework",
-    "tests.userapp",
     "rolca.backup",
     "rolca.core",
     "rolca.payment",
