@@ -84,7 +84,7 @@ export interface AuthorError {
 export interface AuthorModel {
   first_name: string;
   last_name: string;
-  dob?: Date;
+  dob: Date | undefined;
   school?: string;
   mentor?: string;
   club?: string;

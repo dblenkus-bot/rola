@@ -13,9 +13,8 @@ export default {
   ): AxiosPromise<PaginatedResponse<Payment>> {
     return apiClient.get('/payment', {
       params: {
-        // eslint-disable-next-line @typescript-eslint/camelcase
         submissionset__in: submissionSetIds.join(','),
-        // eslint-disable-next-line @typescript-eslint/camelcase
+
         page_size: submissionSetIds.length,
       },
     });
