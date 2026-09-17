@@ -98,10 +98,6 @@ class Contest(BaseModel):
     #: confirmation in HTML form
     confirmation_html = models.TextField(default="")
 
-    confirmation_email = models.ForeignKey(
-        "drf_user.Email", null=True, blank=True, on_delete=models.SET_NULL
-    )
-
     dob_required = models.BooleanField(default=False)
 
     club_show = models.BooleanField(default=False)

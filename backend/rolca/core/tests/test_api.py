@@ -13,6 +13,7 @@ from rest_framework.test import APIRequestFactory, APITestCase, force_authentica
 
 from rolca.core.api.views import ContestViewSet, FileViewSet, SubmissionViewSet
 from rolca.core.models import Author, Contest, File, Submission, Theme
+from tests.factories import create_user
 
 
 def generate_photo():
@@ -52,7 +53,9 @@ class ContestApiTest(APITestCase):
 
         # public user
         resp = self.contest_list_view(request)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            resp.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+        )
         self.assertEqual(contest_create_mock.call_count, 0)
 
         # normal user
@@ -106,7 +109,9 @@ class ContestApiTest(APITestCase):
 
         # public user
         resp = self.contest_detail_view(request, pk=1)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            resp.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+        )
         self.assertEqual(contest_update_mock.call_count, 0)
 
         # normal user
@@ -127,7 +132,9 @@ class ContestApiTest(APITestCase):
 
         # public user
         resp = self.contest_detail_view(request, pk=1)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            resp.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+        )
         self.assertEqual(contest_update_mock.call_count, 0)
 
         # normal user
@@ -148,7 +155,9 @@ class ContestApiTest(APITestCase):
 
         # public user
         resp = self.contest_detail_view(request, pk=1)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            resp.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+        )
         self.assertEqual(contest_destroy_mock.call_count, 0)
 
         # normal user
@@ -165,10 +174,9 @@ class ContestApiTest(APITestCase):
 
 class SubmissionViewSetTest(APITestCase):
     def setUp(self):
-        user_model = get_user_model()
-        self.creator = user_model.objects.create_user(username="creator")
-        self.user1 = user_model.objects.create_user(username="user1")
-        self.user2 = user_model.objects.create_user(username="user2")
+        self.creator = create_user("creator")
+        self.user1 = create_user("user1")
+        self.user2 = create_user("user2")
 
         today = timezone.now()
         tomorrow = today + timedelta(days=1)
@@ -238,8 +246,7 @@ class SubmissionViewSetTest(APITestCase):
 class FileViewSetTest(APITestCase):
     @classmethod
     def setUpTestData(cls):
-        user_model = get_user_model()
-        cls.user = user_model.objects.create_user(username="user")
+        cls.user = create_user("user")
 
     def setUp(self):
         self.factory = APIRequestFactory()
@@ -261,7 +268,9 @@ class FileViewSetTest(APITestCase):
 
         # Public user.
         resp = self.file_view(request)
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn(
+            resp.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN)
+        )
         self.assertEqual(file_create_mock.call_count, 0)
 
         # Admin user.

@@ -13,7 +13,6 @@ Core API views
 """
 
 import logging
-from functools import partial
 
 from django.db import transaction
 from django.db.models import Q
@@ -45,6 +44,7 @@ from rolca.core.models import (
     Submission,
     SubmissionSet,
 )
+from rolca.integration import schedule_submission_confirmation
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
 
         """
         return Submission.objects.filter(
-            Q(user__id=self.request.user.id)
+            Q(user=self.request.user)
             | Q(theme__contest__publish_date__lte=timezone.now())
         )
 
@@ -142,11 +142,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         )
         submission_set.submissions.add(*instances)
 
-        if contest.confirmation_email and request.user.email:
-            transaction.on_commit(
-                partial(contest.confirmation_email.send, request.user.email),
-                robust=True,
-            )
+        schedule_submission_confirmation(submission_set)
 
         headers = self.get_success_headers(serializer.data)
         return Response(

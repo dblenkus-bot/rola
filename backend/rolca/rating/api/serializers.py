@@ -17,6 +17,7 @@ from rolca.core.api.serializers import BaseSerializer, FileSerializer
 from rolca.core.api.serializers import ContestSerializer as CoreContestSerializer
 from rolca.core.api.serializers import SubmissionSerializer as CoreSubmissionSerializer
 from rolca.core.api.serializers import ThemeSerializer as CoreThemeSerializer
+from rolca.integration import get_author_country
 from rolca.rating.models import Judge, Rating, SubmissionReward
 
 
@@ -115,12 +116,9 @@ class AuthorResultsSerializer(CoreAuthorSerializer):
             "country",
         ]
 
-    def get_country(self, author):
+    def get_country(self, author) -> str | None:
         """Return the optional country supplied by the host user model."""
-        if not author.user or not author.user.location:
-            return None
-
-        return author.user.location.country
+        return get_author_country(author)
 
 
 class SubmissionResultsSerializer(CoreSubmissionSerializer):

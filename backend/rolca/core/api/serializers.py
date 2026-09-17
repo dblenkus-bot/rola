@@ -94,12 +94,15 @@ class AuthorSerializer(BaseSerializer):
             "distinction",
         ]
 
-    def get_email(self, author):
+    def get_email(self, author) -> str | None:
         """Return author's email for superusers, ``None`` field otherwise."""
         if not self.context["request"].user.is_superuser:
             return None
 
-        return author.user.email if author.user else author.email
+        if author.user is None:
+            return author.email
+        email_field = author.user.get_email_field_name()
+        return getattr(author.user, email_field, None)
 
 
 class SubmissionSerializer(BaseSerializer):

@@ -4,7 +4,7 @@ import io
 import zipfile
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -23,18 +23,18 @@ from rolca.core.models import (
 )
 from rolca.payment.models import Payment
 from rolca.rating.models import Judge, Rating, SubmissionReward, ThemeResults
-from tests.userapp.models import Email, User
+from tests.factories import create_user
+
+confirmation_callback = Mock()
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
 def world():
-    owner = User.objects.create_user(username="owner", email="owner@example.org")
-    other = User.objects.create_user(username="other", email="other@example.org")
-    admin = User.objects.create_superuser(
-        username="admin", email="admin@example.org", password="secret"
-    )
+    owner = create_user("owner")
+    other = create_user("other")
+    admin = create_user("admin", superuser=True)
     now = timezone.now()
     contest = Contest.objects.create(
         user=admin,
@@ -59,6 +59,13 @@ def world():
         author=author,
         other_author=other_author,
         client=client,
+    )
+
+
+def rows(response):
+    """Read list responses with or without the host's pagination envelope."""
+    return (
+        response.data["results"] if isinstance(response.data, dict) else response.data
     )
 
 
@@ -93,23 +100,23 @@ def submitted(world, **changes):
 def test_author_list_is_scoped_to_requesting_user(world):
     response = world.client.get("/api/author/")
     assert response.status_code == 200
-    assert [item["id"] for item in response.data] == [world.author.pk]
+    assert [item["id"] for item in rows(response)] == [world.author.pk]
 
 
 @pytest.mark.parametrize("batch", [False, True])
 def test_submission_creates_set_and_sends_one_confirmation_after_commit(
-    world, batch, mailoutbox, django_capture_on_commit_callbacks
+    world, batch, settings, django_capture_on_commit_callbacks
 ):
-    world.contest.confirmation_email = Email.objects.create(
-        subject="Thank you", body="Submitted"
+    settings.ROLCA_SUBMISSION_CONFIRMATION_CALLBACK = (
+        "tests.test_workflows.confirmation_callback"
     )
-    world.contest.save()
+    confirmation_callback.reset_mock()
     data = payload(world)
     if batch:
         data = [data, payload(world)]
     with django_capture_on_commit_callbacks(execute=True):
         response = world.client.post("/api/submission/", data, format="json")
-        assert not mailoutbox
+        confirmation_callback.assert_not_called()
     assert response.status_code == 201, response.data
     assert isinstance(response.data, list) == batch
     group = SubmissionSet.objects.get()
@@ -117,8 +124,7 @@ def test_submission_creates_set_and_sends_one_confirmation_after_commit(
     assert group.contest == world.contest
     assert group.user == world.owner
     assert group.submissions.count() == (2 if batch else 1)
-    assert len(mailoutbox) == 1
-    assert mailoutbox[0].to == [world.owner.email]
+    confirmation_callback.assert_called_once_with(group)
 
 
 @pytest.mark.parametrize(
@@ -256,12 +262,12 @@ def test_contest_and_institution_filters_are_applied(world):
         end_date=timezone.now() - timedelta(days=2),
     )
     response = world.client.get("/api/contest/", {"is_active": "true"})
-    assert [item["id"] for item in response.data] == [world.contest.pk]
+    assert [item["id"] for item in rows(response)] == [world.contest.pk]
     desired = Institution.objects.create(kind=1, name="School")
     Institution.objects.create(kind=1, name="Elsewhere")
     assert [
         item["id"]
-        for item in world.client.get("/api/institution/", {"name": "School"}).data
+        for item in rows(world.client.get("/api/institution/", {"name": "School"}))
     ] == [desired.pk]
 
 
@@ -271,14 +277,14 @@ def test_submission_and_set_filters_are_applied(world):
         user=world.owner, author=world.author, contest=world.contest
     )
     group.submissions.add(item)
-    assert world.client.get("/api/submission/", {"contest": 999999}).data == []
+    assert rows(world.client.get("/api/submission/", {"contest": 999999})) == []
     other_contest = Contest.objects.create(
         title="Empty",
         start_date=world.contest.start_date,
         end_date=world.contest.end_date,
     )
     assert (
-        world.client.get("/api/submissionset/", {"contest": other_contest.pk}).data
+        rows(world.client.get("/api/submissionset/", {"contest": other_contest.pk}))
         == []
     )
 
@@ -313,7 +319,7 @@ def test_payment_permissions_upsert_and_filter(world):
     assert world.client.post("/api/payment/", data, format="json").status_code == 201
     assert Payment.objects.count() == 1
     assert not Payment.objects.get().paid
-    assert world.client.get("/api/payment/", {"paid": "true"}).data == []
+    assert rows(world.client.get("/api/payment/", {"paid": "true"})) == []
 
 
 def test_judging_uses_postgres_ordering_and_scopes_paid_submissions(world):
@@ -327,10 +333,11 @@ def test_judging_uses_postgres_ordering_and_scopes_paid_submissions(world):
     unpaid = submitted(world)
     response = world.client.get("/api/judge/submission/")
     assert response.status_code == 200, response.data
-    assert [row["id"] for row in response.data] == [item.pk]
+    assert [row["id"] for row in rows(response)] == [item.pk]
     other_theme = Theme.objects.create(contest=world.contest, title="Empty", n_photos=4)
     assert (
-        world.client.get("/api/judge/submission/", {"theme": other_theme.pk}).data == []
+        rows(world.client.get("/api/judge/submission/", {"theme": other_theme.pk}))
+        == []
     )
     for value in [3, 5]:
         response = world.client.post(
@@ -338,7 +345,7 @@ def test_judging_uses_postgres_ordering_and_scopes_paid_submissions(world):
         )
         assert response.status_code == 201, response.data
     assert Rating.objects.get(judge=judge, submission=item).rating == 5
-    assert world.client.get("/api/rating/", {"submission": unpaid.pk}).data == []
+    assert rows(world.client.get("/api/rating/", {"submission": unpaid.pk})) == []
 
 
 def test_anonymous_judge_endpoint_denies_without_server_error(world):
@@ -373,15 +380,15 @@ def test_results_hide_before_publication_and_handle_optional_relations(world):
     ThemeResults.objects.create(theme=world.theme, accepted_threshold=3)
     SubmissionReward.objects.create(submission=item, kind=1, label="Gold")
     public = APIClient()
-    assert public.get("/api/results/submission/").data == []
+    assert rows(public.get("/api/results/submission/")) == []
     world.contest.publish_date = timezone.now() - timedelta(seconds=1)
     world.contest.save()
     response = public.get("/api/results/submission/")
     assert response.status_code == 200, response.data
-    assert response.data[0]["accepted"] is True
-    assert response.data[0]["author"]["country"] is None
-    assert response.data[0]["author"]["email"] is None
-    assert response.data[0]["reward_kind"] == "Gold"
+    assert rows(response)[0]["accepted"] is True
+    assert rows(response)[0]["author"]["country"] is None
+    assert rows(response)[0]["author"]["email"] is None
+    assert rows(response)[0]["reward_kind"] == "Gold"
 
 
 @pytest.mark.parametrize("method", ["patch", "delete"])

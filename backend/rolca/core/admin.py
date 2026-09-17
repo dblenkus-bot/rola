@@ -33,7 +33,7 @@ class ContestAdmin(admin.ModelAdmin):
     fieldsets_new = [
         (None, {"fields": ("title", "description")}),
         ("Dates", {"fields": ("start_date", "end_date", "publish_date")}),
-        ("Details", {"fields": ("header_image", "notice_html", "confirmation_email")}),
+        ("Details", {"fields": ("header_image", "notice_html")}),
     ]
     fieldsets = [
         (None, {"fields": ("title", "description")}),
@@ -49,7 +49,6 @@ class ContestAdmin(admin.ModelAdmin):
                     "header_image",
                     "notice_html",
                     "confirmation_html",
-                    "confirmation_email",
                 )
             },
         ),
