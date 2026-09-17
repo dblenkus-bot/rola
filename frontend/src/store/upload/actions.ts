@@ -1,4 +1,5 @@
 import { AppThunk } from '..';
+import { addNotificationError } from '../notifications/actions';
 
 import { Contest, Theme } from '../../types/api';
 import {
@@ -38,15 +39,19 @@ export const uploadSubmit =
 
     dispatch(uploadSetUploading());
 
-    const newContest = await validate(contest);
-    if (!newContest.errors.hasError) {
-      await upload(contest);
-      dispatch(uploadSetRedirect());
-    } else {
-      dispatch(uploadSetContest(newContest));
+    try {
+      const newContest = await validate(contest);
+      if (!newContest.errors.hasError) {
+        await upload(contest);
+        dispatch(uploadSetRedirect());
+      } else {
+        dispatch(uploadSetContest(newContest));
+      }
+    } catch {
+      dispatch(addNotificationError('Upload failed. Please try again.'));
+    } finally {
+      dispatch(uploadUnsetUploading());
     }
-
-    dispatch(uploadUnsetUploading());
   };
 
 export const uploadSetContest = (payload: ContestModel): UploadActionTypes => ({

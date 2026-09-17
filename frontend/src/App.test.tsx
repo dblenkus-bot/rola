@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AxiosError } from 'axios';
@@ -75,7 +75,34 @@ describe('application routes', () => {
       await screen.findByText('Could not load contests. Please try again.'),
     ).toBeInTheDocument();
   });
-
+  it('logs in and returns to the protected upload form', async () => {
+    const user = userEvent.setup();
+    open('/contest/1/upload');
+    const email = await screen.findByRole('textbox', { name: /email/i });
+    await user.type(email, 'participant@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'example-password');
+    await user.click(screen.getByRole('button', { name: /log in|login/i }));
+    await screen.findByRole('heading', { name: contest.title });
+    await waitFor(() =>
+      expect(window.location.pathname).toBe('/contest/1/upload'),
+    );
+    expect(
+      await screen.findByRole('textbox', { name: /first name/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Nature' })).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Select photograph')).toHaveLength(2);
+    expect(
+      screen.getByRole('button', { name: /choose date/i }),
+    ).toBeInTheDocument();
+  });
+  it('renders the requested confirmation template', async () => {
+    localStorage.setItem(
+      'token',
+      JSON.stringify({ token: 'signed-in', expires: '2999-01-01T00:00:00Z' }),
+    );
+    open('/contest/1/confirm');
+    expect(await screen.findByText('Submission received')).toBeInTheDocument();
+  });
 });
 
 describe('failed page requests', () => {

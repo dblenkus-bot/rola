@@ -22,7 +22,7 @@ const ShowImage: React.FC<ShowImageProps> = (props) => {
     <img
       className={className}
       src={src || '/img/no-photo.png'}
-      alt="Missing"
+      alt={src ? 'Selected photograph' : 'No photograph selected'}
     />
   );
 };

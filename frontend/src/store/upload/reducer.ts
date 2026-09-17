@@ -26,9 +26,9 @@ const reducer = (
     case UPLOAD_INIT: {
       const contest = action.payload;
       return {
-        ...state,
+        ...initialState,
         contest: {
-          ...state.contest,
+          ...getEmptyContest(),
           meta: {
             title: contest.title,
             description: contest.description ?? '',

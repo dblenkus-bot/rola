@@ -35,6 +35,9 @@ class ImageField extends React.Component<ImageFieldProps> {
 
   handleRemove = (): void => {
     this._updateImage(undefined);
+    if (this.imageRef.current) {
+      this.imageRef.current.value = '';
+    }
   };
 
   render(): React.ReactNode {

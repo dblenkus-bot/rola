@@ -19,6 +19,8 @@ const ImageButtons: React.FC<ImageButtonsProps> = (props) => {
     <input
       className={classes.fileInput}
       type="file"
+      accept="image/jpeg"
+      aria-label="Select photograph"
       onChange={handleChange}
       ref={imageRef}
     />

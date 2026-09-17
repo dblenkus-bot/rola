@@ -1,5 +1,6 @@
 import {
   configureStore,
+  isImmutableDefault,
   combineReducers,
   type ThunkAction,
   type UnknownAction,
@@ -22,6 +23,12 @@ const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
+      immutableCheck: {
+        // Browser File metadata getters can return new objects on every access.
+        isImmutable: (value: unknown) =>
+          (typeof File !== 'undefined' && value instanceof File) ||
+          isImmutableDefault(value),
+      },
       serializableCheck: {
         ignoredActions: ['AUTHOR_UPDATE', 'IMAGE_STORE', 'UPLOAD_SET_CONTEST'],
         ignoredPaths: ['upload.contest'],

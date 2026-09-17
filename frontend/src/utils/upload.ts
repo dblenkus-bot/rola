@@ -1,83 +1,47 @@
-import { flatten, without } from 'lodash';
 import { DateTime } from 'luxon';
-
 import ImageService from '../services/ImageService';
-import { Author } from '../types/api';
-import {
-  AuthorModel,
-  ContestModel,
-  ImageModel,
-  SubmissionModel,
-  ThemeModel,
-} from '../types/models';
-import SubmissionService from '../services/SubmissionService';
+import SubmissionService, {
+  type SubmissionCreatePayload,
+} from '../services/SubmissionService';
 import AuthorService from '../services/AuthorService';
+import type { ContestModel } from '../types/models';
 
-import { asyncMap } from './async';
-
-// interface XXX {
-//     files: number[];
-//     title: string;
-//     description: string;
-// }
-
-const processImage = async (image: ImageModel): Promise<any> => {
-  const { file } = image;
-  if (image.file) {
-    const { data } = await ImageService.uploadImage(file!);
-    return data;
+export default async function upload(contest: ContestModel): Promise<void> {
+  const submissions: Omit<SubmissionCreatePayload, 'author'>[] = [];
+  for (const theme of contest.themes) {
+    for (const submission of theme.submissions) {
+      const files = [];
+      for (const image of submission.images) {
+        if (image.file) {
+          const { data } = await ImageService.uploadImage(image.file);
+          files.push(data);
+        }
+      }
+      if (files.length) {
+        submissions.push({
+          files,
+          title: submission.title,
+          description: submission.description,
+          theme: theme.meta.id,
+        });
+      }
+    }
   }
-  return undefined;
-};
-
-const processSubmission = async (submission: SubmissionModel): Promise<any> => {
-  // let files = await asyncMap(submission.images, processImage);
-  let files = [];
-  // eslint-disable-next-line no-restricted-syntax
-  for (const image of submission.images) {
-    // eslint-disable-next-line no-await-in-loop
-    const result = await processImage(image);
-    files.push(result);
+  if (!submissions.length) {
+    throw new Error('Select at least one image.');
   }
-
-  files = without(files, undefined);
-  const { title, description } = submission;
-
-  if (!files.length) return undefined;
-
-  return { files, title, description };
-};
-
-const processTheme = async (theme: ThemeModel): Promise<any> => {
-  let submissions = await asyncMap(theme.submissions, processSubmission);
-  submissions = without(submissions, undefined);
-  return flatten(submissions).map((submission) => ({
-    ...submission,
-    theme: theme.meta.id,
-  }));
-};
-
-const processAuthor = async (author: AuthorModel): Promise<Author> => {
-  const { first_name, last_name, school, mentor, club, distinction } = author;
-  const dob = author.dob
-    ? DateTime.fromJSDate(author.dob).toFormat('yyyy-MM-dd')
-    : '';
-  const { data } = await AuthorService.create({
+  const { first_name, last_name, school, mentor, club, distinction, dob } =
+    contest.author;
+  const { data: author } = await AuthorService.create({
     first_name,
     last_name,
-    dob,
-    school,
-    mentor,
-    club,
+    school: school ?? '',
+    mentor: mentor ?? '',
+    club: club ?? '',
     distinction,
+    dob: dob ? DateTime.fromJSDate(dob).toFormat('yyyy-MM-dd') : '',
   });
-  return data;
-};
-
-export default async (contest: ContestModel): Promise<void> => {
-  const themes = await asyncMap(contest.themes, processTheme);
-  let submissions = flatten(themes);
-  const author = await processAuthor(contest.author);
-  submissions = submissions.map((submission) => ({ ...submission, author }));
-  await SubmissionService.createSubmissions(submissions);
-};
+  await SubmissionService.createSubmissions(
+    submissions.map((submission) => ({ ...submission, author })),
+  );
+}
