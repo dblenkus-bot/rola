@@ -26,11 +26,11 @@ from drf_user import views as user_views
 from rolca.urls import route_lists
 
 router = SimpleRouter(trailing_slash=False)
-router.register(r"user", user_views.UserViewSet)
+router.register("user", user_views.UserViewSet, basename="user")
 
 for route_list in route_lists:
     for prefix, viewset in route_list:
-        router.register(prefix, viewset)
+        router.register(prefix, viewset, basename=prefix.replace("/", "-"))
 
 urlpatterns = [
     path("django-admin/", admin.site.urls),

@@ -1,33 +1,27 @@
-import logging
+"""Check that the configured databases accept queries."""
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import connections
-
-logger = logging.getLogger(__name__)
+from django.db.utils import DatabaseError
 
 
 def check_database():
-    """Check connections to all databases."""
-    try:
-        for name in connections:
-            cursor = connections[name].cursor()
-            cursor.execute("SELECT 1;")
-            row = cursor.fetchone()
-            if row is None:
-                raise RuntimeError("db: Invalid response.")
-    except Exception as ex:
-        logger.exception(ex)
-        raise RuntimeError("db: Cannot connect to database.")
+    """Query every configured database and close its cursor."""
+    for name in connections:
+        try:
+            with connections[name].cursor() as cursor:
+                cursor.execute("SELECT 1")
+                if cursor.fetchone() != (1,):
+                    raise CommandError(f"Database {name} returned an invalid response.")
+        except DatabaseError as error:
+            raise CommandError(f"Database {name} is unavailable.") from error
 
 
 class Command(BaseCommand):
-    """Readiness check for Django application."""
+    """Run the database readiness checks."""
 
-    help = "Readiness check for Django application."
+    help = "Check database readiness."
 
     def handle(self, *args, **options):
-        """Comand handle."""
-        try:
-            check_database()
-        except RuntimeError as ex:
-            raise SystemExit(ex)
+        """Fail when any configured database cannot answer a query."""
+        check_database()
