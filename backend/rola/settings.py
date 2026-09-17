@@ -126,6 +126,8 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rola.pagination.PageNumberPagination",
     "PAGE_SIZE": 500,
+    "NUM_PROXIES": int(os.environ.get("ROLA_NUM_PROXIES", "0")),
+    "DEFAULT_THROTTLE_RATES": {"account": "30/hour", "login": "30/minute"},
 }
 
 LANGUAGE_CODE = "en-us"

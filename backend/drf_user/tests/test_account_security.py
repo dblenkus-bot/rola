@@ -1,14 +1,19 @@
 """Exercise credential and account isolation boundaries."""
 
+from datetime import timedelta
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
-from django.core import mail
+from django.core import mail, signing
 from django.test import override_settings
 from django.urls import reverse
+from django.utils.timezone import now
 from rest_framework.test import APIClient
 
 from drf_user.models import Location, Token, User
+from drf_user.serializers import PasswordResetSerializer
+from drf_user.utils.signing import PASSWORD_RESET_SALT, generate_reset_token
 
 
 @pytest.fixture
@@ -173,6 +178,55 @@ def test_registration_password_is_checked_against_submitted_name(db, address):
     assert not Location.objects.exists()
 
 
+def test_password_change_revokes_login_and_recovery_tokens(client, account):
+    reset_token = generate_reset_token(account)
+    response = client.post(
+        reverse("user-change-password", kwargs={"id": account.id}),
+        {"current_password": "Original!73", "new_password": "Replacement!73"},
+    )
+    assert response.status_code == 200
+    assert all(token.is_expired for token in account.auth_tokens.all())
+    response = APIClient().post(
+        reverse("user-password-reset"),
+        {"token": reset_token, "new_password": "Another!73"},
+    )
+    assert response.status_code == 400
+
+
+def test_validated_recovery_token_cannot_be_replayed(account):
+    data = {"token": generate_reset_token(account), "new_password": "Replacement!73"}
+    first = PasswordResetSerializer(data=data)
+    second = PasswordResetSerializer(data=data)
+    first.is_valid(raise_exception=True)
+    second.is_valid(raise_exception=True)
+    first.save()
+    from rest_framework.exceptions import ValidationError
+
+    with pytest.raises(ValidationError, match="Bad token"):
+        second.save()
+
+
+def test_recovery_does_not_reveal_unknown_or_inactive_accounts(
+    account, django_capture_on_commit_callbacks
+):
+    client = APIClient()
+    with django_capture_on_commit_callbacks(execute=True):
+        active = client.post(
+            reverse("user-request-password-reset"), {"email": account.email}
+        )
+        unknown = client.post(
+            reverse("user-request-password-reset"), {"email": "unknown@example.com"}
+        )
+        account.is_active = False
+        account.save(update_fields=["is_active"])
+        inactive = client.post(
+            reverse("user-request-password-reset"), {"email": account.email}
+        )
+    assert active.status_code == unknown.status_code == inactive.status_code == 200
+    assert active.data == unknown.data == inactive.data
+    assert len(mail.outbox) == 1
+
+
 def test_recovery_email_uses_configured_frontend(
     account, django_capture_on_commit_callbacks
 ):
@@ -189,6 +243,53 @@ def test_recovery_email_uses_configured_frontend(
     )
     assert link.startswith("https://photos.example.com/password-reset?")
     assert parse_qs(urlsplit(link).query)["token"]
+
+
+@pytest.mark.parametrize(
+    "payload", [None, {}, {"email": [], "counter": 0}, {"email": "x", "counter": True}]
+)
+def test_signed_malformed_recovery_payload_returns_validation_error(db, payload):
+    response = APIClient().post(
+        reverse("user-password-reset"),
+        {
+            "token": signing.dumps(payload, salt=PASSWORD_RESET_SALT),
+            "new_password": "Replacement!73",
+        },
+    )
+    assert response.status_code == 400
+
+
+def test_expired_login_tokens_are_rejected(account):
+    token = Token.objects.create_token(
+        user=account, expires=now() - timedelta(seconds=1)
+    )
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    assert client.get(reverse("user-list")).status_code == 401
+    account.is_active = False
+    account.save(update_fields=["is_active"])
+    token.expires = now() + timedelta(days=1)
+    token.save(update_fields=["expires"])
+    assert client.get(reverse("user-list")).status_code == 401
+
+
+def test_authentication_endpoints_are_rate_limited(db):
+    from drf_user.throttling import LoginThrottle
+
+    with patch.object(LoginThrottle, "rate", "1/hour", create=True):
+        client = APIClient()
+        assert (
+            client.post(
+                reverse("login"), {"email": "nobody@example.com", "password": "wrong"}
+            ).status_code
+            == 400
+        )
+        assert (
+            client.post(
+                reverse("login"), {"email": "nobody@example.com", "password": "wrong"}
+            ).status_code
+            == 429
+        )
 
 
 def test_nullable_names_and_user_clean_are_safe(account):
