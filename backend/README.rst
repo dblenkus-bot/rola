@@ -1,28 +1,13 @@
-=====
-Rolca
-=====
+============
+Rola backend
+============
 
-|build| |coverage| |docs|
+Django host and domain apps for the Rola photography contest platform.
 
-.. |build| image:: https://github.com/dblenkus/rolca/workflows/build/badge.svg?branch=master
-    :target: https://github.com/dblenkus/rolca/actions?query=workflow%3Abuild
-    :alt: Build Status
+Install this directory with ``python -m pip install .``. Runtime and development
+dependency groups are declared in ``pyproject.toml``. Configure the deployment
+environment and use ``rola.settings`` as ``DJANGO_SETTINGS_MODULE``.
 
-.. |coverage| image:: https://codecov.io/gh/dblenkus/rolca/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/dblenkus/rolca
-    :alt: Coverage Status
-
-.. |docs| image:: https://readthedocs.org/projects/rolca/badge/?version=latest
-    :target: http://rolca.readthedocs.io/
-    :alt: Documentation Status
-
-Open source platform for organising photography contests.
-
-
-Development and upgrades
-========================
-
-Requires Python 3.12–3.14 and Django 6.1. See ``docs/contributing.rst`` for
-installation and tests, and ``docs/upgrading.rst`` for integration and migration
-requirements. Rolca relies on the host application's ``drf_user`` models; the
-unrelated PyPI package with that name is not a substitute.
+See the repository's ``docs`` directory for development, deployment, integration
+and database-upgrade instructions. Existing Rolca databases require the explicit
+``upgrade_legacy_rolca`` transition before ordinary migration.

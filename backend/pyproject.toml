@@ -1,87 +1,84 @@
 [build-system]
-requires = ["setuptools>=84,<85", "setuptools-scm>=10.2.3,<11"]
+requires = ["setuptools>=84,<85"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rolca"
-dynamic = ["version"]
-description = "Open source platform for organising photography contests"
+name = "rola"
+version = "0.1.0"
+description = "Photography contest platform"
 readme = "README.rst"
 requires-python = ">=3.12,<3.15"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "drf_user/LICENSE"]
 authors = [{name = "Domen Blenkuš", email = "domen@blenkus.com"}]
-classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
-    "Environment :: Web Environment",
-    "Framework :: Django",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Topic :: Internet :: WWW/HTTP",
-]
 dependencies = [
     "boto3>=1.43.96,<1.44",
     "channels>=4.3.2,<5",
     "channels-redis>=4.3,<5",
+    "daphne>=4.2.3,<5",
     "Django>=6.1.1,<6.2",
-    "djangorestframework>=3.18.1,<3.19",
+    "django-cors-headers>=4.9,<5",
     "django-filter>=26.1,<27",
+    "django-storages[s3]>=1.14.6,<2",
+    "djangorestframework>=3.18.1,<3.19",
+    "drf-spectacular>=0.30,<0.31",
     "Pillow>=12.3,<13",
     "psycopg[binary]>=3.3.5,<4",
+    "redis>=8.1,<9",
 ]
 
 [project.urls]
-Homepage = "https://github.com/dblenkus/rolca"
+Homepage = "https://github.com/dblenkus/rola"
 
 [project.optional-dependencies]
 test = ["pytest>=9.1.1,<10", "pytest-django>=4.14,<5", "pytest-cov>=7.1,<8"]
 docs = ["Sphinx>=9.1,<10", "sphinx-rtd-theme>=3.1,<4"]
-package = ["build>=1.6.1,<2", "twine>=7,<8", "check-manifest>=0.51,<1", "tox>=4.61.5,<5"]
-lint = ["black>=26.5.1,<27", "flake8>=7.3,<8", "isort>=9.0.1,<10", "ruff>=0.16.8,<0.17"]
-
-[tool.setuptools]
-include-package-data = false
+package = ["build>=1.6.1,<2", "twine>=7,<8"]
+lint = [
+    "ruff>=0.16.8,<0.17",
+    "mypy>=2.3.1,<3",
+    "django-stubs>=6.1.1,<6.2",
+    "djangorestframework-stubs>=3.18.1,<3.19",
+]
 
 [tool.setuptools.packages.find]
-where = ["src"]
-exclude = ["tests", "tests.*", "*.tests", "*.tests.*"]
+where = ["."]
+include = ["rola*", "rolca*", "drf_user*", "utils*"]
+exclude = ["*.tests", "*.tests.*"]
 
 [tool.setuptools.package-data]
 "rolca.core" = ["locale/sl/LC_MESSAGES/django.*"]
-
-[tool.setuptools_scm]
-
-[tool.black]
-target-version = ["py312"]
-skip-string-normalization = true
-extend-exclude = "/migrations/"
+"drf_user" = ["templates/**/*.txt", "templates/**/*.html"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "tests.settings"
+DJANGO_SETTINGS_MODULE = "rola.test_settings"
 django_find_project = false
 addopts = "--import-mode=importlib"
 pythonpath = ["."]
-testpaths = ["src/rolca", "tests"]
+testpaths = ["drf_user/tests", "rolca", "tests", "rola_integration/tests"]
 markers = ["redis: integration test requiring ROLCA_REDIS_URL"]
-
-[tool.isort]
-profile = "black"
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "DJANGOTHIRD", "FIRSTPARTY", "LOCALFOLDER"]
-known_django = ["django"]
-known_djangothird = ["rest_framework"]
-known_first_party = ["rolca", "tests"]
-skip_glob = ["*/migrations/*"]
 
 [tool.ruff]
 target-version = "py312"
-extend-exclude = ["**/migrations/**", "**/tests/**"]
+line-length = 88
+extend-exclude = ["**/migrations/**", "**/legacy_migrations/**"]
 
 [tool.ruff.lint]
-select = ["D"]
-ignore = ["D202"]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "D"]
+ignore = ["E501", "D202"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
+
+[tool.ruff.lint.per-file-ignores]
+"!rolca/**" = ["D"]
+"**/tests/**" = ["D"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+files = ["rola/environment.py", "drf_user/settings.py", "drf_user/throttling.py"]
+strict = true
+warn_unused_ignores = true
