@@ -1,5 +1,6 @@
 """Account management endpoints."""
 
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import permissions, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -27,6 +28,7 @@ class LoginView(views.APIView):
     authentication_classes = []
     throttle_classes = [LoginThrottle]
 
+    @extend_schema(request=LoginSerializer, responses=TokenSerializer)
     def post(self, request):
         """Validate credentials and return a token with its expiration."""
         serializer = LoginSerializer(data=request.data, context={"request": request})
@@ -35,6 +37,11 @@ class LoginView(views.APIView):
         return Response(TokenSerializer(token).data)
 
 
+@extend_schema_view(
+    create=extend_schema(responses={201: UserSerializer}),
+    update=extend_schema(responses=UserSerializer),
+    partial_update=extend_schema(responses=UserSerializer),
+)
 class UserViewSet(viewsets.ModelViewSet):
     """Manage the current account, with administrative access for superusers."""
 
@@ -66,6 +73,11 @@ class UserViewSet(viewsets.ModelViewSet):
             return self.queryset.filter(pk=user.pk)
         return self.queryset
 
+    @extend_schema(parameters=[OpenApiParameter("current", bool)])
+    def list(self, request, *args, **kwargs):
+        """List accounts visible to the caller."""
+        return super().list(request, *args, **kwargs)
+
     def get_throttles(self):
         """Rate-limit account creation and recovery by caller address."""
         if self.action in {
@@ -77,6 +89,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return [AccountThrottle()]
         return super().get_throttles()
 
+    @extend_schema(request=ActivationSerializer, responses={200: None})
     @action(
         detail=False,
         methods=["post"],
@@ -90,6 +103,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response()
 
+    @extend_schema(request=ChangePasswordSerializer, responses={200: None})
     @action(detail=True, methods=["post"])
     def change_password(self, request, **kwargs):
         """Change the caller's password and expire previous tokens."""
@@ -100,6 +114,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response()
 
+    @extend_schema(request=RequestPasswordResetSerializer, responses={200: None})
     @action(
         detail=False,
         methods=["post"],
@@ -115,6 +130,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response()
 
+    @extend_schema(request=PasswordResetSerializer, responses={200: None})
     @action(
         detail=False,
         methods=["post"],

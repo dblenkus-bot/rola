@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from .models import Location, Token, User
@@ -66,7 +67,6 @@ class NormalizedEmailField(serializers.EmailField):
         return User.objects.normalize_email(super().to_internal_value(data))
 
 
-
 class UserWriteSerializer(UserSerializer):
     """Validate profile writes while retaining the flat account representation."""
 
@@ -122,6 +122,7 @@ class UserWriteSerializer(UserSerializer):
         return super().update(instance, validated_data)
 
 
+@extend_schema_serializer(component_name="User")
 class UserRegistrationSerializer(UserWriteSerializer):
     """Validate a new account, including its required password."""
 

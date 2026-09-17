@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "django_filters",
+    "drf_spectacular",
     "rolca.core",
     "rolca.payment",
     "rolca.rating",
@@ -127,7 +128,15 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rola.pagination.PageNumberPagination",
     "PAGE_SIZE": 500,
     "NUM_PROXIES": int(os.environ.get("ROLA_NUM_PROXIES", "0")),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_RATES": {"account": "30/hour", "login": "30/minute"},
+}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Rola API",
+    "DESCRIPTION": "Accounts, photography contests, submissions, judging and payments.",
+    "VERSION": "1.0.0",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 LANGUAGE_CODE = "en-us"
