@@ -1,5 +1,6 @@
 import React from 'react';
-import { Card, Grid, makeStyles } from '@material-ui/core';
+import { Card, Grid } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
 
 import { Rating as RatingModel, Submission } from '../../types/api';
 import Rating from './Rating';
@@ -17,7 +18,7 @@ const ThemeGallery: React.FC<ThemeGalleryProps> = ({
   ratings,
   handleClick,
 }: ThemeGalleryProps) => {
-  const useStyles = makeStyles({
+  const useStyles = makeStyles()({
     card: { cursor: 'pointer' },
     wrapOut: {
       width: '100%',
@@ -44,14 +45,14 @@ const ThemeGallery: React.FC<ThemeGalleryProps> = ({
     rating: { textAlign: 'center' },
   });
 
-  const classes = useStyles();
+  const { classes } = useStyles();
 
   return (
     <Grid container spacing={2}>
       {submissions.map(({ id, files, title }) => {
         const rating = ratings.find((r) => r.submission === id);
         return isSeries ? (
-          <Grid item key={id} xs={12}>
+          <Grid key={id} size={{ xs: 12 }}>
             <Card
               raised
               className={classes.card}
@@ -63,8 +64,8 @@ const ThemeGallery: React.FC<ThemeGalleryProps> = ({
                     <img
                       key={file.id}
                       className={classes.image}
-                      src={file.thumbnail}
-                      alt={title}
+                      src={file.thumbnail || file.file}
+                      alt={title ?? ''}
                     />
                   ))}
                 </div>
@@ -83,7 +84,7 @@ const ThemeGallery: React.FC<ThemeGalleryProps> = ({
             </Card>
           </Grid>
         ) : (
-          <Grid item key={id} xs={6} sm={4} md={3} lg={3}>
+          <Grid key={id} size={{ xs: 6, sm: 4, md: 3, lg: 3 }}>
             <Card
               raised
               className={classes.card}
@@ -95,8 +96,8 @@ const ThemeGallery: React.FC<ThemeGalleryProps> = ({
                     <img
                       key={file.id}
                       className={classes.image}
-                      src={file.thumbnail}
-                      alt={title}
+                      src={file.thumbnail || file.file}
+                      alt={title ?? ''}
                     />
                   ))}
                 </div>

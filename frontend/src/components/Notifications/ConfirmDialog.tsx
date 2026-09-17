@@ -8,10 +8,10 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-} from '@material-ui/core';
+} from '@mui/material';
 
 interface ConfirmDialogProps {
-  children: React.ReactChild;
+  children: React.ReactNode;
   title: string;
   open: boolean;
   onClose: () => void;

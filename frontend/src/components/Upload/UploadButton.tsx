@@ -1,16 +1,16 @@
 import React from 'react';
 
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from 'tss-react/mui';
 
 import { Link } from 'react-router-dom';
 
-import { Button, Grid } from '@material-ui/core';
+import { Button, Grid } from '@mui/material';
 
 interface UploadButtonProps {
   contestId: number;
 }
 
-const useStyles = makeStyles(({ spacing }) => ({
+const useStyles = makeStyles()(({ spacing }) => ({
   button: {
     margin: spacing(2),
     padding: spacing(2, 4),
@@ -21,10 +21,10 @@ const useStyles = makeStyles(({ spacing }) => ({
 }));
 
 const UploadButton: React.FC<UploadButtonProps> = ({ contestId }) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
 
   return (
-    <Grid container justify="center">
+    <Grid container sx={{ justifyContent: 'center' }}>
       <Link to={`/contest/${contestId}/upload`} className={classes.link}>
         <Button
           className={classes.button}

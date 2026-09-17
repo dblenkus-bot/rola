@@ -1,16 +1,8 @@
-import React from 'react';
-
-import LuxonUtils from '@date-io/luxon';
-import {
-  MuiPickersUtilsProvider,
-  KeyboardDatePicker,
-} from '@material-ui/pickers';
-import { MaterialUiPickersDate } from '@material-ui/pickers/typings/date';
-
-export interface DateChangeEvent {
-  name: string;
-  value: Date;
-}
+import type { DateChange } from '../../types/models';
+import { DateTime } from 'luxon';
+import { DatePicker as MuiDatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterLuxon } from '@mui/x-date-pickers/AdapterLuxon';
 
 interface DatePickerProps {
   name: string;
@@ -20,10 +12,9 @@ interface DatePickerProps {
   required?: boolean;
   autoComplete: string;
   autoFocus?: boolean;
-  onChange: (event: DateChangeEvent) => void;
+  onChange: (event: DateChange) => void;
 }
-
-const DatePicker: React.FC<DatePickerProps> = ({
+export default function DatePicker({
   name,
   label,
   value,
@@ -32,38 +23,33 @@ const DatePicker: React.FC<DatePickerProps> = ({
   autoComplete,
   autoFocus = false,
   onChange,
-}: DatePickerProps) => {
-  const handleDateChange = (date: MaterialUiPickersDate): void => {
-    if (date) onChange({ name, value: date.toJSDate() });
-  };
-
+}: DatePickerProps) {
   return (
-    <MuiPickersUtilsProvider utils={LuxonUtils}>
-      <KeyboardDatePicker
+    <LocalizationProvider dateAdapter={AdapterLuxon}>
+      <MuiDatePicker
         name={name}
-        variant="inline"
-        inputVariant="outlined"
-        fullWidth
-        margin="normal"
-        openTo="year"
-        views={['year', 'month', 'date']}
-        format="dd. MM. yyyy"
-        autoOk
         label={label}
-        required={required}
-        disableToolbar
-        autoComplete={autoComplete}
+        value={value ? DateTime.fromJSDate(value) : null}
+        openTo="year"
+        views={['year', 'month', 'day']}
+        format="dd. MM. yyyy"
         autoFocus={autoFocus}
-        value={value}
-        onChange={handleDateChange}
-        KeyboardButtonProps={{
-          'aria-label': 'change date',
+        onChange={(date) => {
+          if (date?.isValid) {
+            onChange({ name, value: date.toJSDate() });
+          }
         }}
-        error={error !== null}
-        helperText={error || ''}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            margin: 'normal',
+            required,
+            slotProps: { htmlInput: { autoComplete } },
+            error: error !== null,
+            helperText: error || '',
+          },
+        }}
       />
-    </MuiPickersUtilsProvider>
+    </LocalizationProvider>
   );
-};
-
-export default DatePicker;
+}

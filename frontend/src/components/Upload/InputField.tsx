@@ -1,11 +1,7 @@
+import type { InputChange } from '../../types/models';
 import React from 'react';
 
-import { TextField } from '@material-ui/core';
-
-export interface IInputChangeEvent {
-  name: string;
-  value: string;
-}
+import { TextField } from '@mui/material';
 
 export interface InputFieldProps {
   className: string;
@@ -18,7 +14,7 @@ export interface InputFieldProps {
   required: boolean;
   rows: number;
   autoFocus: boolean;
-  onChange: (event: IInputChangeEvent) => void;
+  onChange: (event: InputChange) => void;
 }
 
 class InputField extends React.Component<InputFieldProps> {

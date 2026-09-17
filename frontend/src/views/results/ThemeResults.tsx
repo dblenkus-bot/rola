@@ -1,5 +1,5 @@
 import React, { CSSProperties, useEffect, useState } from 'react';
-import { Redirect, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import _ from 'lodash';
 
 import {
@@ -10,7 +10,7 @@ import {
   TableContainer,
   TableRow,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import ContestService from '../../services/ContestService';
 import LoadingProgress from '../../components/LoadingProgress';
@@ -27,8 +27,14 @@ const ThemeResults: React.FC = () => {
     ResultsSubmission[][]
   >([]);
   const [contest, setContest] = useState<Contest | null>(null);
-  const [redirect, setRedirect] = useState<null | number>(null);
-  const { contestId, themeId } = useParams<RouteMatchParams>();
+  const [redirect, setNavigate] = useState<null | number>(null);
+  const { contestId, themeId } = useParams<keyof RouteMatchParams>();
+  if (!contestId) {
+    throw new Error('Missing contestId route parameter');
+  }
+  if (!themeId) {
+    throw new Error('Missing themeId route parameter');
+  }
 
   useEffect(() => {
     const fetch = async (): Promise<void> => {
@@ -52,11 +58,16 @@ const ThemeResults: React.FC = () => {
     fetchContest();
   }, [contestId]);
 
-  const getAuthor = (submissions: ResultsSubmission[]): ResultsAuthor =>
-    submissions[0].author;
+  const getAuthor = (submissions: ResultsSubmission[]): ResultsAuthor => {
+    const author = submissions[0]?.author;
+    if (!author) {
+      throw new Error('Submission group is empty');
+    }
+    return author;
+  };
 
   const getAuthorReward = (author: ResultsAuthor): string => {
-    if (author.reward_theme?.toString(10) !== themeId) return '';
+    if (author.reward_theme?.toString() !== themeId) return '';
     return author.reward || '';
   };
 
@@ -107,9 +118,8 @@ const ThemeResults: React.FC = () => {
 
   if (redirect)
     return (
-      <Redirect
+      <Navigate
         to={`/results/contest/${contestId}/theme/${themeId}/submission/${redirect}`}
-        push
       />
     );
 
@@ -152,7 +162,7 @@ const ThemeResults: React.FC = () => {
                       key={submission.id}
                       hover={isAccepted(submission)}
                       onClick={() =>
-                        isAccepted(submission) && setRedirect(submission.id)
+                        isAccepted(submission) && setNavigate(submission.id)
                       }
                     >
                       <TableCell
@@ -164,7 +174,7 @@ const ThemeResults: React.FC = () => {
                       </TableCell>
                       <TableCell
                         align="right"
-                        padding="default"
+                        padding="normal"
                         style={getRewardStyle(submission)}
                       >
                         <Typography style={getRewardTextStyle(submission)}>

@@ -1,3 +1,4 @@
+import type { InputChange } from '../types/models';
 import React from 'react';
 
 import { withTranslation, WithTranslation } from 'react-i18next';
@@ -13,7 +14,6 @@ import { Card, CardContent, CardHeader, Grid, Link } from '@material-ui/core';
 
 import { userContext } from '../components/Auth/AuthProvider';
 import LoginForm, { Errors, Fields } from '../components/Auth/LoginForm';
-import { IInputChangeEvent } from '../components/Upload/InputField';
 
 interface LoginViewProps extends RouteComponentProps, WithTranslation {}
 
@@ -43,7 +43,7 @@ class LoginView extends React.Component<LoginViewProps, LoginViewState> {
     redirect: false,
   };
 
-  handleChange = ({ name, value }: IInputChangeEvent): void => {
+  handleChange = ({ name, value }: InputChange): void => {
     this.setState((state) => {
       const fields: Fields = Object.assign({}, state.fields);
       const errors: Errors = Object.assign({}, state.errors);

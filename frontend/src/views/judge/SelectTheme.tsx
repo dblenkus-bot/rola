@@ -9,16 +9,10 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import JudgeContestService from '../../services/JudgeContestService';
 import { JuryContest } from '../../types/api';
-
-const CustomButton = ({ navigate, ...rest }: { navigate: Function }) => {
-  // Rendering element with the 'navigate' prop raises an error, so we have
-  // to strip it: Warning: Invalid value for prop `navigate` on <a> tag.
-  return React.createElement(Button, rest);
-};
 
 const SelectTheme: React.FC = () => {
   const [contests, setContests] = useState<JuryContest[]>([]);
@@ -51,13 +45,13 @@ const SelectTheme: React.FC = () => {
                     {theme.ratings_number}/{theme.submissions_number}
                   </TableCell>
                   <TableCell align="right">
-                    <Link
+                    <Button
                       to={`/judge/contest/${contest.id}/theme/${theme.id}`}
-                      component={CustomButton}
+                      component={Link}
                       color="primary"
                     >
                       {t('open')}
-                    </Link>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

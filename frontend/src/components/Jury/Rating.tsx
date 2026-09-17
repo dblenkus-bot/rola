@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import _ from 'lodash';
 
-import { makeStyles } from '@material-ui/core';
-import { Star } from '@material-ui/icons';
+import { makeStyles } from 'tss-react/mui';
+import { Star } from '@mui/icons-material';
 
 interface RatingProps {
   max: number;
   value: number;
-  size?: 'small' | 'default' | 'large';
+  size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   onChange?: (value: number) => void;
 }
 
-const useStyles = makeStyles({
+const useStyles = makeStyles()({
   filledStar: {
     cursor: 'pointer',
     color: '#ffb400',
@@ -26,11 +26,11 @@ const useStyles = makeStyles({
 const Rating: React.FC<RatingProps> = ({
   max,
   value,
-  size = 'default',
+  size = 'medium',
   disabled = false,
   onChange,
 }: RatingProps) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
 
   const [displayValue, setDisplayValue] = useState<number | null>(null);
 

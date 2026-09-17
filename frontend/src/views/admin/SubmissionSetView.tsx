@@ -1,9 +1,9 @@
+import { useParams } from 'react-router-dom';
 import React from 'react';
-import { withRouter, RouteComponentProps } from 'react-router';
 
 import { withTranslation, WithTranslation } from 'react-i18next';
 
-import { Card, Grid } from '@material-ui/core';
+import { Card, Grid } from '@mui/material';
 
 import { Contest, SubmissionSet } from '../../types/api';
 
@@ -15,8 +15,9 @@ interface RouteMatchParams {
   submissionSetId: string;
 }
 
-interface SubmissionListProps
-  extends RouteComponentProps<RouteMatchParams>, WithTranslation {}
+interface SubmissionListProps extends WithTranslation {
+  match: { params: RouteMatchParams };
+}
 
 interface SubmissionListState {
   contest: Contest | null;
@@ -41,7 +42,7 @@ class SubmissionList extends React.Component<
   }
 
   getSubmissionSetAuthor = (submissionSet: SubmissionSet): string => {
-    if (!submissionSet.submissions.length) return '';
+    if (!submissionSet.submissions[0]) return '';
 
     const {
       first_name: firstName,
@@ -70,7 +71,7 @@ class SubmissionList extends React.Component<
 
     return (
       <>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <b>{t('contest')}:</b> {contest?.title}
           <br />
           <b>{t('author')}:</b>{' '}
@@ -84,11 +85,12 @@ class SubmissionList extends React.Component<
               (t) => t.id === submission.theme,
             );
             return (
-              <Grid key={submission.id} item xs={12} sm={6} md={4}>
+              <Grid key={submission.id} size={{ xs: 12, sm: 6, md: 4 }}>
                 <Card raised>
-                  {submission.files.map((file) => (
+                  {(submission.files ?? []).map((file) => (
                     <img
-                      alt={submission.title}
+                      key={file.id}
+                      alt={submission.title ?? ''}
                       src={file.file}
                       style={{
                         border: '1px solid #ddd',
@@ -119,4 +121,16 @@ class SubmissionList extends React.Component<
   }
 }
 
-export default withTranslation()(withRouter(SubmissionList));
+const RoutedView = withTranslation()(SubmissionList);
+export default function RouteView() {
+  const params = useParams();
+  const contestId = params.contestId;
+  if (!contestId) {
+    throw new Error('Missing contestId route parameter');
+  }
+  const submissionSetId = params.submissionSetId;
+  if (!submissionSetId) {
+    throw new Error('Missing submissionSetId route parameter');
+  }
+  return <RoutedView match={{ params: { contestId, submissionSetId } }} />;
+}

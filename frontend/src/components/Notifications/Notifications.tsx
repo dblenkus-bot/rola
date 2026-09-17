@@ -1,49 +1,35 @@
-import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import type { AppDispatch, AppState } from '../../store';
+import { deleteMessage } from '../../store/notifications/actions';
 
-import Snackbar from '@material-ui/core/Snackbar';
-import Alert from '@material-ui/lab/Alert';
-
-import {
-  deleteMessage,
-  deleteMessageWithDelay,
-} from '../../store/notifications/actions';
-import { Notification } from '../../store/notifications/types';
-import { isUndefined } from 'util';
-
-const Notifications: React.FC = () => {
-  const dispatch = useDispatch();
-  const notification: Notification | undefined = useSelector((store: any) => {
-    const { notifications } = store;
-    return notifications[notifications.length - 1];
-  });
-  if (notification) {
-    dispatch(deleteMessageWithDelay(notification.id));
+export default function Notifications() {
+  const dispatch = useDispatch<AppDispatch>();
+  const notification = useSelector((state: AppState) =>
+    state.notifications.at(-1),
+  );
+  if (!notification) {
+    return null;
   }
-
-  const handleClose = () => {
-    dispatch(deleteMessage(notification?.id || -1));
+  const close = () => {
+    dispatch(deleteMessage(notification.id));
   };
-
-  return !isUndefined(notification) ? (
+  return (
     <Snackbar
-      open={!isUndefined(notification)}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      transitionDuration={{ enter: 500 }}
-      // This is required to trigger the animation on the following notification.
       key={notification.id}
+      open
+      autoHideDuration={6000}
+      onClose={(_, reason) => {
+        if (reason !== 'clickaway') {
+          close();
+        }
+      }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
     >
-      <Alert
-        severity={notification.severity}
-        variant="filled"
-        onClose={handleClose}
-      >
+      <Alert severity={notification.severity} variant="filled" onClose={close}>
         {notification.message}
       </Alert>
     </Snackbar>
-  ) : (
-    <></>
   );
-};
-
-export default Notifications;
+}

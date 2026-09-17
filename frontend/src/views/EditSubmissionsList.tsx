@@ -3,7 +3,7 @@ import React from 'react';
 import { groupBy, sum } from 'lodash';
 
 import { WithTranslation, withTranslation } from 'react-i18next';
-import { withStyles, WithStyles } from '@material-ui/core/styles';
+import { withStyles } from 'tss-react/mui';
 
 import {
   Button,
@@ -16,7 +16,7 @@ import {
   TableRow,
   Tooltip,
   Typography,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import ConfirmDialog from '../components/Notifications/ConfirmDialog';
 
@@ -26,8 +26,11 @@ import SubmissionService from '../services/SubmissionService';
 import { Author, Contest, Submission } from '../types/api';
 import { asyncMap } from '../utils/async';
 
-interface EditSubmissionListProps
-  extends WithStyles<typeof editListStyles>, WithTranslation {}
+type StyleProps = {
+  classes?: Record<keyof ReturnType<typeof editListStyles>, string>;
+};
+
+interface EditSubmissionListProps extends StyleProps, WithTranslation {}
 
 interface EditSubmissionsListState {
   contests: Contest[];
@@ -96,7 +99,8 @@ class EditSubmissionsList extends React.Component<
   };
 
   render() {
-    const { classes, t } = this.props;
+    const { t } = this.props;
+    const classes = withStyles.getClasses(this.props);
 
     if (!this.state.submissions.length)
       return (
@@ -110,8 +114,11 @@ class EditSubmissionsList extends React.Component<
       const contestSubmissions = this.getSubmissionsForContest(contest);
       const submissionsByAuthor = groupBy(contestSubmissions, 'author.id');
 
-      for (let submissions of Object.values(submissionsByAuthor)) {
-        const author = submissions[0].author;
+      for (const submissions of Object.values(submissionsByAuthor)) {
+        const author = submissions[0]?.author;
+        if (!author) {
+          continue;
+        }
         const submissions_n = Object.keys(groupBy(submissions, 'theme')).length;
         const photos_n = sum(
           submissions.map((submission) => submission.files.length),
@@ -181,7 +188,7 @@ class EditSubmissionsList extends React.Component<
           onClose={this.closeDialog}
           onConfirm={this.processDelete}
         >
-          {t('delete_confirmation') as React.ReactChild}
+          {t('delete_confirmation') as React.ReactNode}
         </ConfirmDialog>
       </>
     );
@@ -189,5 +196,5 @@ class EditSubmissionsList extends React.Component<
 }
 
 export default withTranslation()(
-  withStyles(editListStyles)(EditSubmissionsList),
+  withStyles(EditSubmissionsList, editListStyles),
 );

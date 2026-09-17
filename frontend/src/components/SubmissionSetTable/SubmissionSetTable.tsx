@@ -14,7 +14,7 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import { PaginatedResponse, Payment, SubmissionSet } from '../../types/api';
 import SubmissionSetTableRow from './SubmissionSetTableRow';
@@ -129,8 +129,8 @@ const SubmissionSetTable: React.FC<SubmissionSetTableProps> = ({
                 count={count}
                 rowsPerPage={pageSize}
                 page={page - 1}
-                onChangePage={handlePageChange}
-                onChangeRowsPerPage={handleChangeRowsPerPage}
+                onPageChange={handlePageChange}
+                onRowsPerPageChange={handleChangeRowsPerPage}
                 labelRowsPerPage={t('rows_per_page')}
                 labelDisplayedRows={getLabelDisplayedRows}
               />

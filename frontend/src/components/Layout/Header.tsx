@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 
 import { Link } from 'react-router-dom';
 
-import { AppBar, Button, Toolbar, Typography } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { AppBar, Button, Toolbar, Typography } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
 
 import Dropdown from './Dropdown';
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles()((theme) => ({
   menuButton: {
     marginRight: theme.spacing(2),
   },
@@ -17,14 +17,8 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomButton = ({ navigate, ...rest }: { navigate: Function }) => {
-  // Rendering element with the 'navigate' prop raises an error, so we have
-  // to strip it: Warning: Invalid value for prop `navigate` on <a> tag.
-  return React.createElement(Button, rest);
-};
-
 const Header: React.FC = () => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { i18n, t } = useTranslation();
 
   const handleLanguageChange = (
@@ -39,30 +33,30 @@ const Header: React.FC = () => {
         <Typography variant="h6" className={classes.title}>
           Rolca
         </Typography>
-        <Link
+        <Button
           to="/contests"
-          component={CustomButton}
+          component={Link}
           className={classes.menuButton}
           color="inherit"
         >
           {t('active_contests')}
-        </Link>
-        <Link
+        </Button>
+        <Button
           to="/user/submissions"
-          component={CustomButton}
+          component={Link}
           className={classes.menuButton}
           color="inherit"
         >
           {t('edit_submissions')}
-        </Link>
-        <Link
+        </Button>
+        <Button
           to="/results"
-          component={CustomButton}
+          component={Link}
           className={classes.menuButton}
           color="inherit"
         >
           {t('results')}
-        </Link>
+        </Button>
 
         {i18n.language === 'en' ? (
           <Button onClick={handleLanguageChange} value="sl" color="inherit">

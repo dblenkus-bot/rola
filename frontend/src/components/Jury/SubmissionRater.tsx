@@ -2,8 +2,9 @@ import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 
-import { IconButton, makeStyles } from '@material-ui/core';
-import { Close, NavigateBefore, NavigateNext } from '@material-ui/icons';
+import { IconButton } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
+import { Close, NavigateBefore, NavigateNext } from '@mui/icons-material';
 
 import { Submission } from '../../types/api';
 import Rating from './Rating';
@@ -31,7 +32,7 @@ const SubmissionRater: React.FC<SubmissionRaterProps> = ({
   nextSubmission,
   updateRating,
 }: SubmissionRaterProps) => {
-  const useStyles = makeStyles({
+  const useStyles = makeStyles()({
     mainFlex: {
       display: 'flex',
       flexDirection: 'column',
@@ -62,7 +63,7 @@ const SubmissionRater: React.FC<SubmissionRaterProps> = ({
     },
   });
 
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { t } = useTranslation();
   const { description, files, title } = submission;
 
@@ -81,7 +82,11 @@ const SubmissionRater: React.FC<SubmissionRaterProps> = ({
             }}
           >
             {files.slice(0, 3).map((file) => (
-              <img className={classes.image} src={file.file} alt={title} />
+              <img
+                className={classes.image}
+                src={file.file}
+                alt={title ?? ''}
+              />
             ))}
           </div>
           <div
@@ -92,7 +97,11 @@ const SubmissionRater: React.FC<SubmissionRaterProps> = ({
             }}
           >
             {files.slice(3, 6).map((file) => (
-              <img className={classes.image} src={file.file} alt={title} />
+              <img
+                className={classes.image}
+                src={file.file}
+                alt={title ?? ''}
+              />
             ))}
           </div>
         </div>
@@ -103,7 +112,7 @@ const SubmissionRater: React.FC<SubmissionRaterProps> = ({
           <IconButton disabled={!isNext} onClick={() => nextSubmission()}>
             <NavigateNext />
           </IconButton>
-          {/* Placeholder to match the alignment. */}
+
           <IconButton className={classes.invisibleIcon}>
             <Close />
           </IconButton>

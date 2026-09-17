@@ -1,33 +1,13 @@
-import React from 'react';
-import { Route, RouteProps, Redirect } from 'react-router-dom';
+import { useContext, type ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { userContext } from './AuthProvider';
 
-import { userContext } from '../../components/Auth/AuthProvider';
-
-const PrivateRoute: React.FC<RouteProps> = ({
-  children,
-  component,
-  ...rest
-}) => {
-  const user = React.useContext(userContext);
-
-  return (
-    <Route
-      {...rest}
-      render={({ location }) =>
-        // fakeAuth.isAuthenticated ? (
-        user.isLoggedIn() ? (
-          React.createElement(component || '')
-        ) : (
-          <Redirect
-            to={{
-              pathname: '/login',
-              state: { from: location },
-            }}
-          />
-        )
-      }
-    />
+export default function PrivateRoute({ children }: { children: ReactNode }) {
+  const user = useContext(userContext);
+  const location = useLocation();
+  return user.isLoggedIn() ? (
+    children
+  ) : (
+    <Navigate to="/login" state={{ from: location }} replace />
   );
-};
-
-export default PrivateRoute;
+}

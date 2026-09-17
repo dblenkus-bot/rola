@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { Button, Typography } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { Button, Typography } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
 
 import { authStyles } from '../../../styles/general';
 
@@ -11,12 +11,12 @@ interface RegisterActivateSuccessProps {
   onClick: () => void;
 }
 
-const useStyles = makeStyles(authStyles);
+const useStyles = makeStyles()(authStyles);
 
 const RegisterActivateSuccess: React.FC<RegisterActivateSuccessProps> = (
   props,
 ) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { buttonText, title, onClick } = props;
 
   return (

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { FormControl, FormHelperText } from '@material-ui/core';
+import { FormControl, FormHelperText } from '@mui/material';
 
 import ShowImage from './ShowImage';
 import ImageButtons from './ImageButtons';

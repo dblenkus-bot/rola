@@ -1,21 +1,22 @@
+import { useLocation, type Location } from 'react-router-dom';
 import React from 'react';
 
 import { WithTranslation, withTranslation } from 'react-i18next';
 
 import { isString } from 'lodash';
 
-import { Redirect, RouteComponentProps, withRouter } from 'react-router-dom';
-import { parse } from 'query-string';
+import { Navigate } from 'react-router-dom';
 
-import { Card, CardContent, CardHeader, Grid } from '@material-ui/core';
+import { Card, CardContent, CardHeader, Grid } from '@mui/material';
 
 import RegisterActivateFailed from '../components/Auth/RegisterActivateFailed';
 import RegisterActivateSuccess from '../components/Auth/RegisterActivateSuccess';
 
 import UserService from '../services/UserService';
 
-interface RegisterActivateViewProps
-  extends RouteComponentProps, WithTranslation {}
+interface RegisterActivateViewProps extends WithTranslation {
+  location: Location;
+}
 
 interface RegisterActivateViewState {
   succeeded: boolean | null;
@@ -33,7 +34,7 @@ class RegisterActivateView extends React.Component<
 
   async componentDidMount() {
     const { location } = this.props;
-    const token = parse(location.search)['token'] || '';
+    const token = new URLSearchParams(location.search).get('token') || '';
     if (isString(token)) {
       try {
         await UserService.activateUser({ token });
@@ -53,7 +54,7 @@ class RegisterActivateView extends React.Component<
     const { t } = this.props;
 
     if (redirect) {
-      return <Redirect to="/login" />;
+      return <Navigate to="/login" />;
     }
 
     if (succeeded === null) {
@@ -61,12 +62,12 @@ class RegisterActivateView extends React.Component<
     }
 
     return (
-      <Grid container justify="center">
-        <Grid item xs={12} sm={6} md={4}>
+      <Grid container sx={{ justifyContent: 'center' }}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <Card>
             <CardHeader
               title={t('account_activation')}
-              titleTypographyProps={{ align: 'center' }}
+              slotProps={{ title: { align: 'center' } }}
             />
             <CardContent>
               {succeeded ? (
@@ -82,4 +83,8 @@ class RegisterActivateView extends React.Component<
   }
 }
 
-export default withTranslation()(withRouter(RegisterActivateView));
+const RoutedView = withTranslation()(RegisterActivateView);
+export default function RouteView() {
+  const location = useLocation();
+  return <RoutedView location={location} />;
+}

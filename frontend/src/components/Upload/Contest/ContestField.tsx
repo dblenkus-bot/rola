@@ -2,20 +2,22 @@ import React from 'react';
 
 import { WithTranslation, withTranslation } from 'react-i18next';
 
-import { withStyles, WithStyles } from '@material-ui/core/styles';
+import { withStyles } from 'tss-react/mui';
 
-import { Button, CircularProgress, Grid, Typography } from '@material-ui/core';
-import { Alert } from '@material-ui/lab';
+import { Button, CircularProgress, Grid, Typography } from '@mui/material';
+import { Alert } from '@mui/material';
 
 import { uploadFormStyles } from '../../../styles/general';
 import { InputChange, ContestModel, DateChange } from '../../../types/models';
 
-import HeaderImage from '../../Layout/HeaderImage';
 import AuthorField from '../Author/AuthorField';
 import ThemeField from '../Theme/ThemeField';
 
-interface ContestFieldProps
-  extends WithStyles<typeof uploadFormStyles>, WithTranslation {
+type StyleProps = {
+  classes?: Record<keyof ReturnType<typeof uploadFormStyles>, string>;
+};
+
+interface ContestFieldProps extends StyleProps, WithTranslation {
   contest: ContestModel;
   handleAuthorChange: (payload: InputChange | DateChange) => void;
   handleSubmissionChange: (
@@ -35,7 +37,8 @@ interface ContestFieldProps
 
 class ContestField extends React.Component<ContestFieldProps> {
   render(): React.ReactNode {
-    const { classes, t } = this.props;
+    const { t } = this.props;
+    const classes = withStyles.getClasses(this.props);
 
     const {
       contest,
@@ -68,23 +71,18 @@ class ContestField extends React.Component<ContestFieldProps> {
 
     return (
       <Grid container>
-        <Grid item xs={12}>
-          {/* {contest.meta.headerImage ? (
-                        <HeaderImage src={contest.meta.headerImage} />
-                    ) : (
-                        <></>
-                    )} */}
+        <Grid size={{ xs: 12 }}>
           <Typography align="center" variant="h2">
             {contest.meta.title}
           </Typography>
         </Grid>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Typography align="center" variant="body1">
             {contest.meta.description}
           </Typography>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <form onSubmit={handleClick} noValidate>
             <AuthorField
               handleAUthorChange={handleAuthorChange}
@@ -133,4 +131,4 @@ class ContestField extends React.Component<ContestFieldProps> {
   }
 }
 
-export default withTranslation()(withStyles(uploadFormStyles)(ContestField));
+export default withTranslation()(withStyles(ContestField, uploadFormStyles));

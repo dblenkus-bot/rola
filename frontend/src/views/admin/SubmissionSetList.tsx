@@ -1,10 +1,10 @@
+import { useParams } from 'react-router-dom';
 import React from 'react';
 import { AxiosPromise } from 'axios';
-import { withRouter, RouteComponentProps } from 'react-router';
 
-import { withStyles, WithStyles } from '@material-ui/core/styles';
+import { withStyles } from 'tss-react/mui';
 
-import { Grid, Typography } from '@material-ui/core';
+import { Grid, Typography } from '@mui/material';
 
 import ConfirmDialog from '../../components/Notifications/ConfirmDialog';
 
@@ -16,6 +16,10 @@ import SubmissionSetTable from '../../components/SubmissionSetTable/SubmissionSe
 import LoadingProgress from '../../components/LoadingProgress';
 import { WithTranslation, withTranslation } from 'react-i18next';
 
+type StyleProps = {
+  classes?: Record<keyof ReturnType<typeof editListStyles>, string>;
+};
+
 interface RouteMatchParams {
   contestId: string;
 }
@@ -26,11 +30,9 @@ interface SubmissionSetListState {
   showDialog: boolean;
 }
 
-interface SubmissionSetListProps
-  extends
-    WithStyles<typeof editListStyles>,
-    WithTranslation,
-    RouteComponentProps<RouteMatchParams> {}
+interface SubmissionSetListProps extends StyleProps, WithTranslation {
+  match: { params: RouteMatchParams };
+}
 
 class SubmissionSetList extends React.Component<
   SubmissionSetListProps,
@@ -95,7 +97,7 @@ class SubmissionSetList extends React.Component<
           {contest?.title}
         </Typography>
 
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <SubmissionSetTable
             contestId={contest ? contest.id : 0}
             dataSource={dataSource}
@@ -109,13 +111,21 @@ class SubmissionSetList extends React.Component<
           onClose={this.closeDialog}
           onConfirm={this.processDelete}
         >
-          {t('delete_confirmation') as React.ReactChild}
+          {t('delete_confirmation') as React.ReactNode}
         </ConfirmDialog>
       </>
     );
   }
 }
 
-export default withTranslation()(
-  withStyles(editListStyles)(withRouter(SubmissionSetList)),
+const RoutedView = withTranslation()(
+  withStyles(SubmissionSetList, editListStyles),
 );
+export default function RouteView() {
+  const params = useParams();
+  const contestId = params.contestId;
+  if (!contestId) {
+    throw new Error('Missing contestId route parameter');
+  }
+  return <RoutedView match={{ params: { contestId } }} />;
+}

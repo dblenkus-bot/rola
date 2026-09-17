@@ -10,7 +10,7 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-} from '@material-ui/core';
+} from '@mui/material';
 
 import ContestService from '../../services/ContestService';
 import { Contest } from '../../types/api';
@@ -19,15 +19,14 @@ import LoadingProgress from '../../components/LoadingProgress';
 interface RouteMatchParams {
   contestId: string;
 }
-const CustomButton = ({ navigate, ...rest }: { navigate: Function }) => {
-  // Rendering element with the 'navigate' prop raises an error, so we have
-  // to strip it: Warning: Invalid value for prop `navigate` on <a> tag.
-  return React.createElement(Button, rest);
-};
 
 const SelectTheme: React.FC = () => {
   const [contest, setContest] = useState<null | Contest>(null);
-  const { contestId } = useParams<RouteMatchParams>();
+  const { contestId } = useParams<keyof RouteMatchParams>();
+  if (!contestId) {
+    throw new Error('Missing contestId route parameter');
+  }
+
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -54,13 +53,13 @@ const SelectTheme: React.FC = () => {
               <TableCell padding="checkbox" />
               <TableCell>{theme.title}</TableCell>
               <TableCell align="right">
-                <Link
+                <Button
                   to={`/results/contest/${contest.id}/theme/${theme.id}`}
-                  component={CustomButton}
+                  component={Link}
                   color="primary"
                 >
                   {t('view')}
-                </Link>
+                </Button>
               </TableCell>
             </TableRow>
           ))}

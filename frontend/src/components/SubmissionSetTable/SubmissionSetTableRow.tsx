@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom';
 
 import { useTranslation } from 'react-i18next';
 
-import { Button, Checkbox, TableCell, TableRow } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
-import AttachMoneyIcon from '@material-ui/icons/AttachMoney';
-import MoneyOffIcon from '@material-ui/icons/MoneyOff';
+import { Button, Checkbox, TableCell, TableRow } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 
 import { editListStyles } from '../../styles/general';
 import { Payment, SubmissionSet } from '../../types/api';
@@ -19,17 +19,6 @@ interface SubmissionSetTableRowProps {
   onPaidChange: (submissionSetId: number, paid: boolean) => void;
   onDelete: (submissionSet: SubmissionSet) => void;
 }
-
-const CustomButton = ({
-  navigate,
-  ...rest
-}: {
-  navigate: Function;
-}): React.ReactElement => {
-  // Rendering element with the 'navigate' prop raises an error, so we have
-  // to strip it: Warning: Invalid value for prop `navigate` on <a> tag.
-  return React.createElement(Button, rest);
-};
 
 const getSubmissionSetAuthor = (submissionSet: SubmissionSet): string => {
   const { first_name: firstName, last_name: lastName } = submissionSet.author;
@@ -43,7 +32,7 @@ const getViewLink = (
   return `/admin/contest/${contestId}/submission/${submissionSet.id}`;
 };
 
-const useStyles = makeStyles(editListStyles);
+const useStyles = makeStyles()(editListStyles);
 
 const SubmissionSetTableRow: React.FC<SubmissionSetTableRowProps> = ({
   contestId,
@@ -52,7 +41,7 @@ const SubmissionSetTableRow: React.FC<SubmissionSetTableRowProps> = ({
   onPaidChange,
   onDelete,
 }: SubmissionSetTableRowProps) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { t } = useTranslation();
 
   const handlePaidChange = (
@@ -80,14 +69,14 @@ const SubmissionSetTableRow: React.FC<SubmissionSetTableRowProps> = ({
         />
       </TableCell>
       <TableCell align="right">
-        <Link
-          component={CustomButton}
+        <Button
+          component={Link}
           to={getViewLink(contestId, submissionSet)}
           className={classes.button}
           color="primary"
         >
           {t('view')}
-        </Link>
+        </Button>
         <Button
           variant="text"
           className={classes.button}

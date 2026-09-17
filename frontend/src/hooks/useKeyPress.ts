@@ -8,10 +8,9 @@ const useKeyPress = (handler: (pressedKey: string) => void): void => {
     [handler],
   );
 
-  // Add event listeners.
   useEffect(() => {
     window.addEventListener('keydown', downHandler);
-    // Remove event listeners on cleanup.
+
     return (): void => {
       window.removeEventListener('keydown', downHandler);
     };

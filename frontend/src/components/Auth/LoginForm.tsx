@@ -1,11 +1,12 @@
+import type { InputChange } from '../../types/models';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
-import { Alert } from '@material-ui/lab';
+import { Button } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
+import { Alert } from '@mui/material';
 
-import InputField, { IInputChangeEvent } from '../Upload/InputField';
+import InputField from '../Upload/InputField';
 
 import { authStyles } from '../../styles/general';
 
@@ -19,25 +20,25 @@ export interface Errors {
   email: null | Array<string>;
   password: null | Array<string>;
   non_field_errors: null | Array<string>;
-  [key: string]: any;
+  [key: string]: string[] | null;
 }
 
 interface LoginFormProps {
   fields: Fields;
   errors: Errors;
-  onChange: (event: IInputChangeEvent) => void;
+  onChange: (event: InputChange) => void;
   onSubmit: () => Promise<void>;
 }
 
-const useStyles = makeStyles(authStyles);
+const useStyles = makeStyles()(authStyles);
 
 const LoginForm: React.FC<LoginFormProps> = (props) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { t } = useTranslation();
   const { errors, fields, onChange, onSubmit } = props;
 
-  const getError = (field: string): string => {
-    return errors[field] ? errors[field].join(' ') : null;
+  const getError = (field: string): string | null => {
+    return errors[field]?.join(' ') ?? null;
   };
 
   const handleSubmit = (event: React.FormEvent) => {

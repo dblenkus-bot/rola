@@ -1,22 +1,22 @@
-import React, { ReactChild } from 'react';
+import React, { ReactNode } from 'react';
 
-import { Grid } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { Grid } from '@mui/material';
+import { makeStyles } from 'tss-react/mui';
 
 import { uploadFormStyles } from '../../../styles/general';
 
 interface ImageGridProps {
-  children: ReactChild;
+  children: ReactNode;
 }
 
-const useStyles = makeStyles(uploadFormStyles);
+const useStyles = makeStyles()(uploadFormStyles);
 
 const ImageGrid: React.FC<ImageGridProps> = (props) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { children } = props;
 
   return (
-    <Grid item xs={12} sm={6} md={4} className={classes.imageGrid}>
+    <Grid className={classes.imageGrid} size={{ xs: 12, sm: 6, md: 4 }}>
       {children}
     </Grid>
   );

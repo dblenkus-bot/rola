@@ -1,10 +1,10 @@
-import React, { ReactChild } from 'react';
+import React, { ReactNode } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from 'tss-react/mui';
 
-import { Button, Grid } from '@material-ui/core';
+import { Button, Grid } from '@mui/material';
 import { uploadFormStyles } from '../../../styles/general';
 
 export interface ImageButtonsProps {
@@ -15,13 +15,13 @@ export interface ImageButtonsProps {
 
 interface StyledButtonProps {
   onClick: () => void;
-  children: ReactChild;
+  children: ReactNode;
 }
 
-const useStyles = makeStyles(uploadFormStyles);
+const useStyles = makeStyles()(uploadFormStyles);
 
 const StyledButton: React.FC<StyledButtonProps> = (props) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { onClick, children } = props;
 
   return (
@@ -45,13 +45,13 @@ const ImageButtons: React.FC<ImageButtonsProps> = (props) => {
 
   return (
     <Grid container spacing={1}>
-      <Grid item xs={buttonWidth}>
+      <Grid size={{ xs: buttonWidth }}>
         <StyledButton onClick={handleChange}>
           {imageSelected ? (t('change') as string) : (t('select') as string)}
         </StyledButton>
       </Grid>
       {imageSelected && (
-        <Grid item xs={buttonWidth}>
+        <Grid size={{ xs: buttonWidth }}>
           <StyledButton onClick={handleRemove}>
             {t('remove') as string}
           </StyledButton>

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Redirect, useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { connect, ConnectedProps } from 'react-redux';
 
-import { Typography } from '@material-ui/core';
+import { Typography } from '@mui/material';
 
 import { AppState, AppDispatch } from '../../store';
 
@@ -26,15 +26,19 @@ const ViewTheme: React.FC<PropsFromRedux> = ({
   submissions,
 }: PropsFromRedux) => {
   const [ratings, setRatings] = useState<Rating[]>([]);
-  const [redirect, setRedirect] = useState<string | null>(null);
-  const { contestId, themeId } = useParams<RouteMatchParams>();
+  const [redirect, setNavigate] = useState<string | null>(null);
+  const { contestId, themeId } = useParams<keyof RouteMatchParams>();
+  if (!contestId) {
+    throw new Error('Missing contestId route parameter');
+  }
+  if (!themeId) {
+    throw new Error('Missing themeId route parameter');
+  }
 
-  // Initialize the store.
   useEffect(() => {
     initialize(contestId, themeId);
   }, [contestId, themeId, initialize]);
 
-  // Fetch ratings.
   useEffect(() => {
     const fetchRatings = async (): Promise<void> => {
       const ratingResource = () =>
@@ -44,11 +48,11 @@ const ViewTheme: React.FC<PropsFromRedux> = ({
     fetchRatings();
   }, [themeId]);
 
-  if (redirect) return <Redirect to={redirect} push />;
+  if (redirect) return <Navigate to={redirect} />;
 
   const handleClick = (submissionId: number): void => {
     setSubmission(submissionId);
-    setRedirect(
+    setNavigate(
       `/judge/contest/${contestId}/theme/${themeId}/rate?submission=${submissionId}`,
     );
   };
@@ -57,7 +61,7 @@ const ViewTheme: React.FC<PropsFromRedux> = ({
 
   return (
     <>
-      <Typography variant="h3" align="center" paragraph>
+      <Typography variant="h3" align="center" sx={{ marginBottom: 2 }}>
         {theme?.title}
       </Typography>
       <ThemeGallery

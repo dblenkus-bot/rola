@@ -2,7 +2,7 @@ import React from 'react';
 
 import { useTranslation } from 'react-i18next';
 
-import { makeStyles } from '@material-ui/core/styles';
+import { makeStyles } from 'tss-react/mui';
 
 import { SubmissionModel, InputChange } from '../../../types/models';
 import { uploadFormStyles } from '../../../styles/general';
@@ -14,10 +14,10 @@ export interface DescriptionFieldProps {
   onChange: (payload: InputChange) => void;
 }
 
-const useStyles = makeStyles(uploadFormStyles);
+const useStyles = makeStyles()(uploadFormStyles);
 
 const DescriptionField: React.FC<DescriptionFieldProps> = (props) => {
-  const classes = useStyles();
+  const { classes } = useStyles();
   const { t } = useTranslation();
   const { submission, onChange } = props;
 

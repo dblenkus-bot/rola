@@ -1,3 +1,4 @@
+import type { InputChange } from '../types/models';
 import React from 'react';
 
 import { withTranslation, WithTranslation } from 'react-i18next';
@@ -8,7 +9,6 @@ import PasswordResetRequestForm, {
   Fields,
 } from '../components/Auth/PasswordResetRequestForm';
 import PasswordResetRequestConfirm from '../components/Auth/PasswordResetRequestConfirm';
-import { IInputChangeEvent } from '../components/Upload/InputField';
 
 import UserService from '../services/UserService';
 
@@ -33,7 +33,7 @@ class PasswordResetRequestView extends React.Component<
     },
   };
 
-  handleChange = ({ name, value }: IInputChangeEvent): void => {
+  handleChange = ({ name, value }: InputChange): void => {
     this.setState((state) => {
       const fields: Fields = Object.assign({}, state.fields);
       fields[name] = value;

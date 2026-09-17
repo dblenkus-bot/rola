@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useHistory, useParams, Redirect } from 'react-router-dom';
+import {
+  useNavigate,
+  useLocation,
+  useParams,
+  Navigate,
+} from 'react-router-dom';
 import { connect, ConnectedProps } from 'react-redux';
 import _ from 'lodash';
-import { parse } from 'query-string';
 
 import SubmissionRater from '../../components/Jury/SubmissionRater';
 
@@ -38,11 +42,18 @@ const RateSubmission: React.FC<PropsFromRedux> = ({
   const [rating, setRating] = useState(0);
   const [close, setClose] = useState(false);
 
-  const { contestId, themeId } = useParams<RouteMatchParams>();
-  const history = useHistory();
+  const { contestId, themeId } = useParams<keyof RouteMatchParams>();
+  if (!contestId) {
+    throw new Error('Missing contestId route parameter');
+  }
+  if (!themeId) {
+    throw new Error('Missing themeId route parameter');
+  }
+
+  const navigate = useNavigate();
+  const location = useLocation();
   const submissionId = useRef(
-    parse(history.location.search, { parseNumbers: true }).submission as
-      number | undefined,
+    Number(new URLSearchParams(location.search).get('submission')) || undefined,
   );
 
   const fetchRaiting = useCallback(async (): Promise<void> => {
@@ -60,18 +71,16 @@ const RateSubmission: React.FC<PropsFromRedux> = ({
     if (isNext) nextSubmission();
   };
 
-  // Initialize the store.
   useEffect(() => {
     initialize(contestId, themeId, submissionId.current);
   }, [contestId, themeId, initialize]);
 
-  // Store submission id in url.
   useEffect(() => {
     if (submission && submissionId.current !== submission.id) {
-      history.push(`?submission=${submission.id}`);
+      navigate(`?submission=${submission.id}`);
       submissionId.current = submission.id;
     }
-  }, [history, submission]);
+  }, [navigate, submission]);
 
   useEffect(() => {
     fetchRaiting();
@@ -91,9 +100,7 @@ const RateSubmission: React.FC<PropsFromRedux> = ({
   const handleClose = () => setClose(true);
 
   if (close)
-    return (
-      <Redirect to={`/judge/contest/${contestId}/theme/${themeId}`} push />
-    );
+    return <Navigate to={`/judge/contest/${contestId}/theme/${themeId}`} />;
 
   if (isLoading || !submission) return <LoadingProgress />;
 

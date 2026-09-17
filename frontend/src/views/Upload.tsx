@@ -1,7 +1,9 @@
+import { useParams } from 'react-router-dom';
+import type { AppDispatch } from '../store';
 import React from 'react';
 import { connect, ConnectedProps } from 'react-redux';
-import { withRouter, RouteComponentProps } from 'react-router';
-import { Redirect } from 'react-router-dom';
+
+import { Navigate } from 'react-router-dom';
 
 import { AppState } from '../store';
 import {
@@ -23,8 +25,9 @@ interface RouteMatchParams {
   contestId: string;
 }
 
-interface UploadViewProps
-  extends PropsFromRedux, RouteComponentProps<RouteMatchParams> {}
+interface UploadViewProps extends PropsFromRedux {
+  match: { params: RouteMatchParams };
+}
 
 class UploadView extends React.Component<UploadViewProps> {
   async componentDidMount() {
@@ -48,7 +51,7 @@ class UploadView extends React.Component<UploadViewProps> {
     const { contestId } = this.props.match.params;
 
     if (redirect) {
-      return <Redirect to={`/contest/${contestId}/confirm`} />;
+      return <Navigate to={`/contest/${contestId}/confirm`} />;
     }
 
     return (
@@ -66,7 +69,7 @@ class UploadView extends React.Component<UploadViewProps> {
 
 const mapStateToProps = (state: AppState) => ({ ...state.upload });
 
-const mapDispatchToProps = (dispatch: any) => ({
+const mapDispatchToProps = (dispatch: AppDispatch) => ({
   uploadInit: (contest: Contest) => dispatch(uploadInit(contest)),
   handleAuthorChange: (payload: InputChange | DateChange) =>
     dispatch(authorUpdate(payload)),
@@ -88,4 +91,12 @@ const connector = connect(mapStateToProps, mapDispatchToProps);
 
 type PropsFromRedux = ConnectedProps<typeof connector>;
 
-export default connector(withRouter(UploadView));
+const RoutedView = connector(UploadView);
+export default function RouteView() {
+  const params = useParams();
+  const contestId = params.contestId;
+  if (!contestId) {
+    throw new Error('Missing contestId route parameter');
+  }
+  return <RoutedView match={{ params: { contestId } }} />;
+}
