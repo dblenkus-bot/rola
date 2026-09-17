@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import '../../i18n/config';
 import { contest } from '../../test/fixtures';
 import ContestCard from './ContestCard';
+import NoticeHtml from './NoticeHtml';
 
 describe('contest information', () => {
   it('shows the contest and opens its upload route', () => {
@@ -21,5 +22,17 @@ describe('contest information', () => {
       '/contest/1/upload',
     );
     expect(screen.getByRole('img')).toHaveAttribute('alt', contest.title);
+  });
+  it('preserves notice formatting while removing executable markup', () => {
+    const { container } = render(
+      <NoticeHtml
+        notice={
+          '<strong>Instructions</strong><script>alert(1)</script><img src="x" onerror="alert(2)">'
+        }
+      />,
+    );
+    expect(screen.getByText('Instructions').tagName).toBe('STRONG');
+    expect(container.querySelector('script')).toBeNull();
+    expect(container.querySelector('img')).not.toHaveAttribute('onerror');
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AxiosError } from 'axios';
@@ -49,6 +49,35 @@ function open(path: string) {
   window.history.replaceState(null, '', path);
   render(<App />);
 }
+describe('application routes', () => {
+  it('loads the public contest list through the API', async () => {
+    open('/contests');
+    expect(
+      await screen.findByRole('heading', { name: contest.title }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open' })).toHaveAttribute(
+      'href',
+      '/contest/1/upload',
+    );
+  });
+  it('shows a useful empty state', async () => {
+    apiClient.defaults.adapter = async (config) =>
+      response(config, { results: [], count: 0, next: null, previous: null });
+    open('/contests');
+    expect(await screen.findByText('No active contests.')).toBeInTheDocument();
+  });
+  it('shows a failed list request', async () => {
+    apiClient.defaults.adapter = async () => {
+      throw new Error('Offline');
+    };
+    open('/contests');
+    expect(
+      await screen.findByText('Could not load contests. Please try again.'),
+    ).toBeInTheDocument();
+  });
+
+});
+
 describe('failed page requests', () => {
   it.each([
     '/contest/1/upload',
