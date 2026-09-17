@@ -1,107 +1,103 @@
-==========================
-Upgrading an existing host
-==========================
+=============================
+Upgrade an existing Rola host
+=============================
 
-Supported stack
-===============
+This upgrade consolidates the host, domain apps and frontend into one repository.
+It also moves contest confirmation configuration into the host integration app.
+Existing user primary keys, public UUIDs, app labels and domain data are retained.
 
-Rolca now targets Python 3.12–3.14, Django 6.1, Django REST framework 3.18,
-django-filter 26, Pillow 12, Channels 4.3, and psycopg 3. PostgreSQL 15 or newer is
-required by Django 6.1. CI and local Compose use PostgreSQL 18.6 and Redis 8.10.1.
-The ``psycopg[binary]`` dependency replaces ``psycopg2-binary``.
+Prepare the database and files
+==============================
 
-This repository supplies reusable Django apps. The companion Rola host provides
-``drf_user.User`` and ``drf_user.Email``. The unrelated PyPI package named
-``drf-user`` is not a replacement. Keep the real host app and its migrations,
-including ``drf_user.0004_email``, installed. Core migration 0010 continues to
-reference that historical node, and the model retains its foreign key to
-``drf_user.Email``. No user table, email template, or primary-key conversion is
-introduced by this upgrade.
+Back up the database and uploaded media, and verify that the backup can be
+restored. Rehearse the upgrade on an isolated restored copy. Stop web processes
+and background workers while applying the schema transition so submissions
+cannot change during the copy and validation steps.
 
-The host must set ``AUTH_USER_MODEL``, include its user app and Rolca apps in
-``INSTALLED_APPS``, and provide the optional ``user.location.country`` relationship
-used in result serialization. Review and upgrade the host's authentication,
-token, email, storage, and middleware dependencies separately.
+If upgrading PostgreSQL, use a supported dump/restore or ``pg_upgrade`` workflow.
+Do not point the new Compose database image at an older major version's data
+directory. The consolidated Compose project uses new volumes; it does not
+import a database or media from another Compose project automatically.
 
-Settings and integration
-========================
+Build the backend image or install ``backend/pyproject.toml`` and configure the
+host to connect to the restored database. Retain the existing ``drf_user`` app
+and ``AUTH_USER_MODEL = "drf_user.User"`` for this migration.
 
-Set ``USE_TZ`` explicitly and test contest dates around timezone and daylight
-saving boundaries. Rolca app configurations retain ``AutoField`` to preserve
-existing primary keys despite Django's newer default.
+Adopt the portable migrations
+=============================
 
-Configure ``ROLCA_MAX_UPLOAD_SIZE`` in bytes and
-``ROLCA_MAX_UPLOAD_RESOLUTION`` in pixels for the image validator. The previous
-test-only names ``ROLCA_MAX_SIZE`` and ``ROLCA_MAX_LONG_EDGE`` are not read by the
-validator.
+Run from ``backend`` before ordinary ``migrate``:
 
-Configure ``BACKUP_AWS_BUCKET_NAME``, ``BACKUP_AWS_ACCESS_KEY_ID``, and
-``BACKUP_AWS_SECRET_ACCESS_KEY``, plus a Redis-backed ``CHANNEL_LAYERS`` setting
-for background workers. Construct consumers with ``BackupConsumer.as_asgi()``
-and set the host's own ``ASGI_APPLICATION``. ``tests.routing`` is an example,
-not a production ASGI entry point.
+.. code-block:: console
 
-Django 6.1 deprecates ``EMAIL_BACKEND`` in favor of ``MAILERS``. Configure the
-host's mailer and verify confirmation messages in staging. Preserve any custom
-email-template behavior in the host app. The built-in logout view requires POST;
-check the consuming frontend's logout flow and CSRF handling.
+   ROLA_BACKUP_ENABLED=true python manage.py upgrade_legacy_rolca
+   ROLA_BACKUP_ENABLED=true python manage.py migrate --noinput
+   python manage.py collectstatic --noinput
 
-When constructing a custom DRF router from ``route_lists``, explicitly give each
-route a unique basename, for example::
+The upgrade command uses the preserved historical migration modules to advance
+a recognized legacy database. It creates the host-owned ``ContestNotification``
+records, copies existing template associations, and verifies those associations
+before removing the old contest column. It then checks the resulting schema
+before recording the portable migration baselines.
 
-    for routes in route_lists:
-        for prefix, viewset in routes:
-            router.register(prefix, viewset, basename=prefix.replace('/', '-'))
+Enable the backup app for this command even if it was disabled in the previous
+host. This lets the command adopt all domain app histories consistently; it
+does not start a worker or upload files. Restore the intended backup setting
+afterward.
 
-This avoids collisions between core, judge, and results viewsets under current
-DRF. Rolca's router uses these names; URL paths and payload shapes are preserved.
-Custom reverse lookups for judge/results routes must use their new distinct names.
+The command supports rerunning after an interrupted upgrade. It rejects unknown
+migration histories or incompatible schemas instead of guessing that an existing
+table matches a new initial migration. If validation fails, investigate on the
+restored copy; do not work around the checks with ``--fake``.
 
-Behavior fixes to verify with clients
-=====================================
+Ordinary ``migrate`` rejects legacy databases that have not completed adoption.
+For a genuinely empty database, run ordinary ``migrate`` directly.
 
-* Filters now use ``filterset_class``; query parameters previously ignored by
-  django-filter now take effect.
-* Author listing is scoped correctly. Submission writes require ownership and
-  are blocked after publication. Related author/file IDs must belong to the
-  requester. Files cannot be reused across submissions.
-* Single and batch submission requests create one submission set atomically.
-  Empty batches, mixed contests/authors, and duplicate files return validation
-  errors. A failed database write does not leave a partial submission set.
-* Confirmation mail is dispatched after a successful transaction commit.
-* Submission updates keep their author and contest, preserving set membership.
-* Rating updates cannot move a score to another submission, and score writes
-  require an active judge for the contest.
-* Contest exports require the organizer or a superuser, include all submission
-  files, and read through Django storage rather than assuming local file paths.
-* The PostgreSQL expression used for stable judging order explicitly casts its
-  integer input to text.
+Update deployment and clients
+=============================
 
-Data and rollout rehearsal
-==========================
+The host keeps ``/api/v1`` and the existing token authentication protocol. Read
+the account API changes below and regenerate frontend types when changing the
+backend schema. Deploy the backend and the updated frontend as a coordinated
+release.
 
-Back up the database and media, record migration state, and restore both into an
-isolated staging environment. Run system checks and ``migrate --plan`` before
-applying migrations. Verify counts and relations for users, authors, contests,
-submissions, files, payments, ratings, rewards, and email templates.
+Replace obsolete Django storage, email and CORS settings with the environment
+configuration in :doc:`deployment`. Python dependencies now come from
+``backend/pyproject.toml``. The frontend uses npm and Vite; rebuild its static
+assets with the intended public API and payment configuration.
 
-Migration 0017 retains its identity and image-regeneration behavior but uses
-Pillow's supported resampling API. Test an upgrade from before this migration
-with actual media if that represents the deployed version. The automated test
-runs its image loop using historical models and a real stored image; it does
-not replace a rehearsal using the host's complete migration history.
+Check the following against the restored deployment before switching traffic:
 
-A PostgreSQL major upgrade needs ``pg_upgrade`` or a dump/restore; simply changing
-the image tag on an existing data volume is insufficient. Schedule it separately
-from the application cutover. Confirm ``pgcrypto`` is available for the historical
-rating migration.
+* Registration, activation, login, account updates and password reset.
+* Existing contest confirmation templates in Django admin.
+* Image upload, submission grouping and payment status.
+* Judge assignments, scoring, publication and contest exports.
+* Static files, original images and thumbnails.
+* Email delivery and the optional backup worker with your actual providers.
 
-Verify entrant, organizer, judge, and anonymous-user workflows, login/logout,
-image upload, results publication, export, and a real S3 backup and restore.
-Automated tests use a fake S3 client and real Redis/PostgreSQL services; they do
-not validate production AWS credentials or bucket policies.
+Account API changes
+===================
 
-Retain the previous application artifact and a tested database/media restore.
-Historical data migrations do not all have reverse functions. Account for new
-writes before attempting rollback; a reverse ``migrate`` command alone is not a
-complete rollback procedure.
+The endpoint paths and token protocol remain, with these intentional changes:
+
+* Profile location fields are present and nullable when an account has no location.
+* Profile updates reject a password field with HTTP 400. Use ``change_password``.
+* Password-reset requests return the same empty HTTP 200 response for active,
+  unknown and inactive addresses. Invalid signed payloads return HTTP 400.
+* Password changes and resets expire existing login tokens and invalidate old
+  password-reset links. Reset consumption is checked atomically.
+* Login, account creation and recovery are rate limited by caller address. Exceeding a
+  configured rate returns HTTP 429.
+* Activation and reset emails point to frontend pages under
+  ``ROLA_FRONTEND_URL``. The old unimplemented backend placeholders are removed.
+
+The checked-in OpenAPI schema describes the current requests and responses.
+
+Rollback
+========
+
+Repository consolidation does not provide an automatic downgrade of production
+data. Keep the previous application images and a verified pre-upgrade database
+and media backup. If the rehearsal reveals a failure, stop and fix it before
+switching production traffic. A rollback after the migration requires restoring
+compatible application and database state together.

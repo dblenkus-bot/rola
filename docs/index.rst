@@ -1,16 +1,16 @@
-.. _index:
+====
+Rola
+====
 
-=====
-Rolca
-=====
-
-Contents
-========
+Run and maintain the photography contest platform.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
-   reference
    contributing
+   architecture
+   integrations
+   deployment
    upgrading
    validation
+   reference

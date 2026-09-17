@@ -1,73 +1,140 @@
-============
-Contributing
-============
+====================
+Develop and validate
+====================
 
-Development setup
-=================
+Use a Python version supported by ``backend/pyproject.toml`` and the Node.js
+version in ``frontend/.node-version``. Docker Compose supplies PostgreSQL and
+Redis for database and worker integration tests.
 
-Use Python 3.12, 3.13, or 3.14. Create an isolated environment and install the
-package with its development extras::
+Run the development stack
+=========================
 
-    python -m venv .venv
-    . .venv/bin/activate
-    python -m pip install -e '.[test,docs,lint,package]'
+Copy ``.env.example`` to ``.env`` and replace its placeholder values. Do not
+commit your local environment file. Run from the repository root:
 
-Start the disposable PostgreSQL and Redis services::
+.. code-block:: console
 
-    docker compose -f tests/docker-compose.yml up -d --wait
-    export ROLCA_POSTGRESQL_PORT=55432
-    export ROLCA_POSTGRESQL_PASSWORD=rolca
-    export ROLCA_REDIS_URL=redis://127.0.0.1:56379/0
+   docker compose up --build
+   docker compose run --rm backend python manage.py createsuperuser
 
-Run the suite, including the Redis worker integration test::
+Open http://localhost:8080. The frontend development server proxies API, admin
+and media requests to Django. Source directories are mounted for live reload.
 
-    python -m pytest -W error::DeprecationWarning --cov=rolca --cov-report=xml
-    python tests/manage.py check
-    python tests/manage.py makemigrations --check --dry-run
-    python tests/manage.py migrate --noinput
-    python -m tox -e linters,docs,packaging
+PostgreSQL and Redis are published only on loopback. Their local ports can be
+changed in ``.env`` if another development stack already uses them. Stopping
+containers retains the database and uploaded media volumes.
 
-``tox -e py312,py313,py314`` runs each supported Python version when its interpreter
-is installed. ``ROLCA_POSTGRESQL_HOST``, ``ROLCA_POSTGRESQL_NAME``,
-``ROLCA_POSTGRESQL_USER``, ``ROLCA_POSTGRESQL_PASSWORD``, and
-``ROLCA_POSTGRESQL_PORT`` override the test database connection. The database user
-needs permission to create a test database. Redis tests skip only when
-``ROLCA_REDIS_URL`` is unset; CI sets it in every test job.
+After ``package-lock.json`` changes, refresh dependencies in the frontend's
+named volume and restart the development server:
 
-Stop the local services after testing::
+.. code-block:: console
 
-    docker compose -f tests/docker-compose.yml down
+   docker compose stop frontend
+   docker compose run --rm --no-deps frontend npm ci
+   docker compose up -d frontend
 
-The ``tests.userapp`` models are a minimal host fixture with the historical
-``drf_user`` label. They exercise a user whose public UUID differs from its integer
-primary key, optional user location, and the confirmation-email relationship.
-They are excluded from the installed wheel and are not an authentication package.
+This refreshes the dependency volume without deleting database or media volumes.
 
-Updating dependencies
-=====================
+Native development
+==================
 
-Declare direct runtime, build, and development dependencies in
-``pyproject.toml``. Update their version ranges there and install the package
-with the appropriate extras. Let the installer resolve transitive dependencies.
+Create a virtual environment and install the declared backend dependencies:
 
-Run the Python matrix, migration checks, worker test, documentation build,
-linters, and package checks. Keep historical
-migration identities stable. Existing data and media need an upgrade rehearsal
-in the host application as described in :doc:`upgrading`.
+.. code-block:: console
 
-Preparing a release
-===================
+   python -m venv .venv
+   .venv/bin/python -m pip install -e './backend[test,lint,docs,package]'
+   docker compose up -d db redis
 
-Version numbers come from Git tags via setuptools-scm. Fetch tags and history
-before building; do not edit ``rolca.__about__`` to bump a version. Update
-``docs/CHANGELOG.rst`` and run the required checks before creating a release tag.
+Set ``ROLA_SECRET_KEY``, ``ROLA_DEBUG=true``, ``ALLOWED_HOSTS`` and the
+``ROLA_POSTGRESQL_*`` connection variables in your shell. Native commands do not
+automatically load ``.env``. Set ``ROLA_REDIS_HOST=127.0.0.1`` and the published
+Redis port when running Django outside Compose.
+Set ``ROLA_FRONTEND_URL=http://localhost:5173`` so account emails link to the
+frontend development server. Adjust it if you change that server's address.
 
-Build and validate distributions in a clean output directory::
+.. code-block:: console
 
-    python -m build
-    python -m twine check dist/*
+   cd backend
+   ../.venv/bin/python manage.py migrate
+   ../.venv/bin/python manage.py runserver
 
-Inspect the wheel and source archive for migrations and translations, and install
-the wheel into a fresh environment for a smoke test. Tag-triggered CI publishes
-to TestPyPI using the existing repository secret. Production PyPI publication and
-host deployment are separate release operations.
+In another terminal, start the frontend from its directory:
+
+.. code-block:: console
+
+   npm ci
+   npm run dev
+
+The default development proxy targets Django on localhost. Set
+``API_PROXY_TARGET`` to use another backend address.
+
+Backend checks
+==============
+
+Run these commands from ``backend`` with the virtual environment activated:
+
+.. code-block:: console
+
+   python -m pip check
+   python -m ruff check .
+   python -m ruff format --check .
+   python -m mypy
+   python -m pytest -W error::DeprecationWarning
+   python manage.py check --settings=rola.test_settings
+   python manage.py makemigrations --check --dry-run --settings=rola.test_settings
+
+The test settings use SQLite for lightweight checks. To validate database
+behavior against PostgreSQL, set ``ROLA_TEST_POSTGRESQL=true`` and the
+``ROLA_POSTGRESQL_*`` variables before running pytest. The database user must
+be able to create and drop a test database. Use an isolated development server.
+Set ``ROLCA_REDIS_URL`` to run the real Redis transport test.
+
+Frontend checks
+===============
+
+Run from ``frontend``:
+
+.. code-block:: console
+
+   npm ci
+   npm run lint
+   npm run format:check
+   npm run typecheck
+   npm test -- --run
+   npm run build
+
+TypeScript stays on the newest release supported by the API generator and
+linting toolchain. The package manifest records that compatibility choice.
+
+Update the API contract
+=======================
+
+After changing serializers, endpoints or their schema annotations, regenerate
+the schema and frontend types:
+
+.. code-block:: console
+
+   cd backend
+   ../.venv/bin/python manage.py spectacular --settings=rola.test_settings --file openapi.yaml --validate --fail-on-warn
+   cd ../frontend
+   npm run api:generate
+
+Review both generated diffs with the implementation. API changes must include
+updated frontend handling and tests for affected response shapes, nullability,
+validation and permissions. CI checks that regeneration leaves no diff.
+
+Documentation and packaging
+===========================
+
+Run from the repository root with the virtual environment activated:
+
+.. code-block:: console
+
+   python -m sphinx -W --keep-going -b html docs docs/_build/html
+   python -m build backend
+   python -m twine check backend/dist/*
+
+CI runs the supported Python matrix, frontend checks, schema drift checks and
+both production image builds. Dependency declarations belong in the manifests;
+do not add hand-maintained lists of transitive Python dependencies.
