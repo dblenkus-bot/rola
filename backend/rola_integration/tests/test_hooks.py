@@ -16,8 +16,7 @@ from rolca.rating.models import (
     SubmissionReward,
     ThemeResults,
 )
-from tests.test_workflows import payload, submitted
-from tests.test_workflows import world as world
+from tests.factories import payload, photo, submitted
 
 pytestmark = pytest.mark.django_db
 
@@ -104,7 +103,6 @@ def test_historical_thumbnail_migration_handles_existing_media(world):
     from PIL import Image
 
     from rola_integration.migration_settings import LEGACY_MIGRATION_MODULES
-    from tests.test_workflows import photo
 
     image = photo(world.owner)
     with override_settings(MIGRATION_MODULES=LEGACY_MIGRATION_MODULES):

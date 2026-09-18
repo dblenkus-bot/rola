@@ -10,8 +10,7 @@ from django.db import connection
 from django.db.migrations.loader import MigrationLoader
 
 from rolca.core.api.serializers import AuthorSerializer
-from tests.test_workflows import payload
-from tests.test_workflows import world as world
+from tests.factories import payload
 
 confirmation_callback = Mock()
 pytestmark = pytest.mark.django_db

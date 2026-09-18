@@ -3,11 +3,9 @@
 import io
 import zipfile
 from datetime import timedelta
-from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
@@ -23,43 +21,11 @@ from rolca.core.models import (
 )
 from rolca.payment.models import Payment
 from rolca.rating.models import Judge, Rating, SubmissionReward, ThemeResults
-from tests.factories import create_user
+from tests.factories import payload, photo, submitted
 
 confirmation_callback = Mock()
 
 pytestmark = pytest.mark.django_db
-
-
-@pytest.fixture
-def world():
-    owner = create_user("owner")
-    other = create_user("other")
-    admin = create_user("admin", superuser=True)
-    now = timezone.now()
-    contest = Contest.objects.create(
-        user=admin,
-        title="Salon",
-        start_date=now - timedelta(days=1),
-        end_date=now + timedelta(days=1),
-        publish_date=now + timedelta(days=2),
-    )
-    theme = Theme.objects.create(contest=contest, title="Nature", n_photos=4)
-    author = Author.objects.create(
-        user=owner, first_name="Alice", last_name="Photographer"
-    )
-    other_author = Author.objects.create(user=other, first_name="Other")
-    client = APIClient()
-    client.force_authenticate(owner)
-    return SimpleNamespace(
-        owner=owner,
-        other=other,
-        admin=admin,
-        contest=contest,
-        theme=theme,
-        author=author,
-        other_author=other_author,
-        client=client,
-    )
 
 
 def rows(response):
@@ -67,34 +33,6 @@ def rows(response):
     return (
         response.data["results"] if isinstance(response.data, dict) else response.data
     )
-
-
-def photo(user, name="photo.jpg"):
-    data = io.BytesIO()
-    Image.new("RGB", (800, 600), "red").save(data, "JPEG")
-    return File.objects.create(
-        user=user,
-        file=SimpleUploadedFile(name, data.getvalue(), content_type="image/jpeg"),
-    )
-
-
-def payload(world, **changes):
-    result = {
-        "title": "Photo",
-        "theme": world.theme.pk,
-        "author": {"id": world.author.pk},
-        "files": [{"id": photo(world.owner).pk}],
-    }
-    result.update(changes)
-    return result
-
-
-def submitted(world, **changes):
-    data = dict(
-        user=world.owner, title="Original", theme=world.theme, author=world.author
-    )
-    data.update(changes)
-    return Submission.objects.create(**data)
 
 
 def test_author_list_is_scoped_to_requesting_user(world):

@@ -17,8 +17,7 @@ from rolca.backup.consumers import BackupConsumer
 from rolca.backup.models import FileBackup
 from rolca.backup.protocol import CHANNEL_BACKUP, TYPE_FILE
 from rolca.backup.signals import commit_signal
-from tests.factories import create_user
-from tests.test_workflows import photo
+from tests.factories import create_user, photo
 
 pytestmark = pytest.mark.django_db
 
