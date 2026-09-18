@@ -229,16 +229,16 @@ class SubmissionViewSetTest(APITestCase):
         self.file3.file.delete()
 
     def test_submission_queryset(self):
-        viewset_mock = Mock(spec=SubmissionViewSet)
+        viewset = SubmissionViewSet()
+        viewset.action = "list"
 
-        viewset_mock.request = Mock(user=self.user2)
-        self.assertEqual(len(SubmissionViewSet.get_queryset(viewset_mock)), 2)
+        viewset.request = Mock(user=self.user2)
+        self.assertEqual(len(viewset.get_queryset()), 2)
 
         self.contest.publish_date = timezone.now() - timedelta(days=1)
         self.contest.save()
 
-        viewset_mock.request = Mock(user=self.user2)
-        self.assertEqual(len(SubmissionViewSet.get_queryset(viewset_mock)), 3)
+        self.assertEqual(len(viewset.get_queryset()), 3)
 
 
 @override_settings(ROLCA_MAX_UPLOAD_SIZE=1024**2)

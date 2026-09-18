@@ -1,11 +1,22 @@
 """.. Ignore pydocstyle D400."""
 
-from django.db.models import CharField, F, Prefetch, Sum, Value
-from django.db.models.functions import SHA1, Cast, Concat
+from django.db.models import (
+    CharField,
+    Count,
+    F,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+)
+from django.db.models.functions import SHA1, Cast, Coalesce, Concat
 from django.utils import timezone
 from rest_framework import mixins, permissions, viewsets
 
 from rolca.core.api.filters import ContestFilter, SubmissionFilter
+from rolca.core.api.querysets import with_submission_details
 from rolca.core.api.serializers import SubmissionSerializer
 from rolca.core.models import Contest, Submission, Theme
 from rolca.integration import author_select_related
@@ -48,8 +59,10 @@ class SubmissionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             contest__in=judge_qs.values("contest"),
             contest__publish_date__gte=timezone.now(),
         )
-        return (
-            Submission.objects.filter(
+        return with_submission_details(
+            super()
+            .get_queryset()
+            .filter(
                 theme__in=theme_qs,
                 submissionset__payment__paid=True,
             )
@@ -73,9 +86,30 @@ class ContestViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     def get_queryset(self):
         """Return queryset for contests that can be shown to judge."""
         judge_qs = Judge.objects.filter(judge=self.request.user)
-        return Contest.objects.filter(
-            pk__in=judge_qs.values("contest"),
-            publish_date__gte=timezone.now(),
+        paid_counts = (
+            Submission.objects.filter(
+                theme=OuterRef("pk"), submissionset__payment__paid=True
+            )
+            .order_by()
+            .values("theme")
+            .annotate(total=Count("pk"))
+            .values("total")
+        )
+        themes = Theme.objects.annotate(
+            submission_count=Coalesce(Subquery(paid_counts), 0),
+            rating_count=Count(
+                "submission__rating",
+                filter=Q(submission__rating__user=self.request.user),
+            ),
+        ).order_by("pk")
+        return (
+            super()
+            .get_queryset()
+            .filter(
+                pk__in=judge_qs.values("contest"),
+                publish_date__gte=timezone.now(),
+            )
+            .prefetch_related(Prefetch("themes", queryset=themes))
         )
 
 

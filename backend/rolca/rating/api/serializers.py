@@ -86,12 +86,18 @@ class JudgeThemeSerializer(CoreThemeSerializer):
 
     def get_ratings_number(self, theme) -> int:
         """Count ratings submitted by the requesting judge."""
+        count = getattr(theme, "rating_count", None)
+        if count is not None:
+            return count
         return Rating.objects.filter(
             user=self.context["request"].user, submission__theme=theme
         ).count()
 
     def get_submissions_number(self, theme) -> int:
         """Count paid submissions available for judging."""
+        count = getattr(theme, "submission_count", None)
+        if count is not None:
+            return count
         return theme.submission_set.filter(submissionset__payment__paid=True).count()
 
 

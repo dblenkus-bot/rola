@@ -15,7 +15,7 @@ Core API views
 import logging
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from rest_framework import exceptions, mixins, permissions, status, viewsets
 from rest_framework.response import Response
@@ -28,6 +28,7 @@ from rolca.core.api.filters import (
 )
 from rolca.core.api.parsers import ImageUploadParser
 from rolca.core.api.permissions import AdminOrReadOnly, IsSubmissionOwnerOrReadOnly
+from rolca.core.api.querysets import with_submission_details
 from rolca.core.api.serializers import (
     AuthorSerializer,
     ContestSerializer,
@@ -43,6 +44,7 @@ from rolca.core.models import (
     Institution,
     Submission,
     SubmissionSet,
+    Theme,
 )
 from rolca.integration import schedule_submission_confirmation
 
@@ -75,7 +77,9 @@ class AuthorViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Restrict authors to their owner unless the requester is an administrator."""
-        queryset = self.queryset
+        queryset = super().get_queryset()
+        if self.action in ("list", "retrieve"):
+            queryset = queryset.select_related("user")
         if self.request.user.is_superuser:
             return queryset
 
@@ -98,10 +102,17 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         * user's submissions
 
         """
-        return Submission.objects.filter(
-            Q(user=self.request.user)
-            | Q(theme__contest__publish_date__lte=timezone.now())
+        queryset = (
+            super()
+            .get_queryset()
+            .filter(
+                Q(user=self.request.user)
+                | Q(theme__contest__publish_date__lte=timezone.now())
+            )
         )
+        if self.action in ("list", "retrieve"):
+            return with_submission_details(queryset)
+        return queryset
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -207,17 +218,18 @@ class SubmissionSetViewSet(
     filterset_class = SubmissionSetFilter
 
     def get_queryset(self):
-        """Return queryset for submissions that can be shown to user.
-
-        Return:
-        * all submissions for already finished contests
-        * user's submissions
-
-        """
-        if self.request.user.is_superuser:
-            return self.queryset
-
-        return self.queryset.filter(user=self.request.user)
+        """Load the requester's submission sets, or all sets for administrators."""
+        queryset = super().get_queryset()
+        if not self.request.user.is_superuser:
+            queryset = queryset.filter(user=self.request.user)
+        if self.action in ("list", "retrieve"):
+            queryset = queryset.select_related("author__user").prefetch_related(
+                Prefetch(
+                    "submissions",
+                    queryset=with_submission_details(Submission.objects.all()),
+                )
+            )
+        return queryset
 
     def destroy(self, request, *args, **kwargs):
         """Destroy the instance and all related submissions."""
@@ -240,3 +252,13 @@ class ContestViewSet(viewsets.ModelViewSet):
     serializer_class = ContestSerializer
     permission_classes = (AdminOrReadOnly,)
     filterset_class = ContestFilter
+
+    def get_queryset(self):
+        """Load contest themes with their submission counts."""
+        queryset = super().get_queryset()
+        if self.action not in ("list", "retrieve"):
+            return queryset
+        themes = Theme.objects.annotate(submission_count=Count("submission")).order_by(
+            "pk"
+        )
+        return queryset.prefetch_related(Prefetch("themes", queryset=themes))

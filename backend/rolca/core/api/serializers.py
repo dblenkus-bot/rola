@@ -234,6 +234,9 @@ class ThemeSerializer(BaseSerializer):
 
     def get_submissions_number(self, theme) -> int:
         """Count submissions in this theme."""
+        count = getattr(theme, "submission_count", None)
+        if count is not None:
+            return count
         return theme.submission_set.count()
 
 
