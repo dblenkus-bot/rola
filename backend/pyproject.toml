@@ -12,7 +12,6 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "drf_user/LICENSE"]
 authors = [{name = "Domen Blenkuš", email = "domen@blenkus.com"}]
 dependencies = [
-    "boto3>=1.43.96,<1.44",
     "channels>=4.3.2,<5",
     "channels-redis>=4.3,<5",
     "daphne>=4.2.3,<5",

@@ -1,6 +1,5 @@
 """Upgrade and explicitly adopt an existing Rolca database."""
 
-from django.apps import apps
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connections, transaction
@@ -138,10 +137,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         """Upgrade recognized histories without recreating existing tables."""
-        if not apps.is_installed("rolca.backup"):
-            raise CommandError(
-                "Run this upgrade with ROLA_BACKUP_ENABLED=true so every legacy app can be migrated."
-            )
         database = options["database"]
         connection = connections[database]
         recorder = MigrationRecorder(connection)

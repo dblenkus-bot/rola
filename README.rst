@@ -36,7 +36,7 @@ Layout
 
 * ``backend/rola`` contains settings and host routing.
 * ``backend/drf_user`` contains the current account and authentication app.
-* ``backend/rolca`` contains the reusable contest, rating, payment and backup apps.
+* ``backend/rolca`` contains the reusable contest, rating and payment apps.
 * ``backend/rola_integration`` connects Rolca to this host's account and email models.
 * ``frontend`` contains the React application and generated API types.
 * ``docs`` contains development, integration, deployment and upgrade instructions.

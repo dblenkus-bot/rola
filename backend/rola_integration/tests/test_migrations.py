@@ -5,9 +5,10 @@ from datetime import timedelta
 import pytest
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import connection
+from django.db import IntegrityError, connection, models, transaction
 from django.db.migrations.executor import MigrationExecutor
 from django.db.migrations.recorder import MigrationRecorder
+from django.db.migrations.state import ModelState
 from django.test import override_settings
 from django.utils import timezone
 
@@ -20,8 +21,8 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 
 @pytest.fixture
-def legacy_database():
-    """Reconstruct a deployed schema with data and no optional backup app tables."""
+def legacy_database(request):
+    """Reconstruct deployed contest data and optional retired backup history."""
     executor = MigrationExecutor(connection)
     executor.migrate([(app, None) for app in LEGACY_MIGRATION_MODULES])
     recorder = MigrationRecorder(connection)
@@ -71,13 +72,54 @@ def legacy_database():
         historical.get_model("payment", "Payment").objects.create(
             submissionset_id=group.pk, paid=True
         )
-    assert "backup_filebackup" not in connection.introspection.table_names()
+    backup_state = getattr(request, "param", "absent")
+    backup_model = None
+    backup_rows = []
+    backup_records = set()
+    if backup_state != "absent":
+        backup_records.add(("backup", "0001_initial"))
+        for key in backup_records:
+            recorder.record_applied(*key)
+    if backup_state == "installed":
+        state = executor.loader.project_state(targets)
+        state.add_model(
+            ModelState(
+                "backup",
+                "FileBackup",
+                [
+                    ("id", models.AutoField(primary_key=True)),
+                    ("done", models.DateTimeField(null=True, blank=True)),
+                    (
+                        "source",
+                        models.ForeignKey("core.File", on_delete=models.CASCADE),
+                    ),
+                ],
+            )
+        )
+        backup_model = state.apps.get_model("backup", "FileBackup")
+        with connection.schema_editor() as editor:
+            editor.create_model(backup_model)
+        image = historical.get_model("core", "File").objects.create(
+            user_id=user.pk, file="existing.jpg", thumbnail="existing-thumb.jpg"
+        )
+        backup_model.objects.create(source_id=image.pk, done=now)
+        backup_rows = list(backup_model.objects.values_list("pk", "source_id", "done"))
+    else:
+        assert "backup_filebackup" not in connection.introspection.table_names()
     yield {
         "contest": contest.pk,
         "template": template.pk,
         "user": user.pk,
         "group": group.pk,
+        "backup_model": backup_model,
+        "backup_rows": backup_rows,
+        "backup_records": backup_records,
     }
+    if backup_model is not None:
+        with connection.schema_editor() as editor:
+            editor.delete_model(backup_model)
+    for key in backup_records:
+        recorder.record_unapplied(*key)
     recorder.record_unapplied("core", "9999_unknown")
     recorded_portable = PORTABLE_MIGRATIONS & set(recorder.applied_migrations())
     if recorded_portable != PORTABLE_MIGRATIONS:
@@ -86,9 +128,12 @@ def legacy_database():
         call_command("upgrade_legacy_rolca", verbosity=0)
 
 
+@pytest.mark.parametrize(
+    "legacy_database", ["absent", "installed", "stale"], indirect=True
+)
 def test_upgrade_preserves_template_links_and_existing_data(legacy_database):
     from rola_integration.models import ContestNotification
-    from rolca.core.models import Contest, SubmissionSet
+    from rolca.core.models import Contest, File, SubmissionSet
     from rolca.payment.models import Payment
 
     with pytest.raises(CommandError, match="upgrade_legacy_rolca"):
@@ -102,13 +147,58 @@ def test_upgrade_preserves_template_links_and_existing_data(legacy_database):
     assert SubmissionSet.objects.get().pk == legacy_database["group"]
     assert SubmissionSet.objects.get().submissions.get().title == "Existing photo"
     assert Payment.objects.get().paid
-    assert "backup_filebackup" in connection.introspection.table_names()
+    backup_model = legacy_database["backup_model"]
+    if backup_model is not None:
+        file_id = legacy_database["backup_rows"][0][1]
+        with pytest.raises(IntegrityError), transaction.atomic():
+            File.objects.filter(pk=file_id).delete()
     assert (
         set(MigrationRecorder(connection).applied_migrations()) >= PORTABLE_MIGRATIONS
     )
     call_command("upgrade_legacy_rolca", verbosity=0)
     call_command("migrate", verbosity=0)
     assert ContestNotification.objects.count() == 1
+    if backup_model is None:
+        assert "backup_filebackup" not in connection.introspection.table_names()
+    else:
+        assert (
+            list(backup_model.objects.values_list("pk", "source_id", "done"))
+            == legacy_database["backup_rows"]
+        )
+        assert File.objects.filter(pk=file_id).exists()
+        File.objects.filter(pk=file_id).delete()
+        assert not File.objects.filter(pk=file_id).exists()
+        assert (
+            list(backup_model.objects.values_list("pk", "source_id", "done"))
+            == legacy_database["backup_rows"]
+        )
+    backup_records = {
+        key
+        for key in MigrationRecorder(connection).applied_migrations()
+        if key[0] == "backup"
+    }
+    assert backup_records == legacy_database["backup_records"]
+
+
+def test_portable_upgrade_preserves_retired_backup_migration_records():
+    recorder = MigrationRecorder(connection)
+    backup_records = {
+        ("backup", "0001_initial"),
+        ("backup", "0001_portable"),
+        ("backup", "9999_retired"),
+    }
+    for key in backup_records:
+        recorder.record_applied(*key)
+    try:
+        call_command("upgrade_legacy_rolca", verbosity=0)
+        call_command("migrate", verbosity=0)
+        assert "backup_filebackup" not in connection.introspection.table_names()
+        assert {
+            key for key in recorder.applied_migrations() if key[0] == "backup"
+        } == backup_records
+    finally:
+        for key in backup_records:
+            recorder.record_unapplied(*key)
 
 
 def test_upgrade_refuses_unknown_history_before_changing_schema(legacy_database):

@@ -28,7 +28,6 @@ MIDDLEWARE = [
 
 
 INSTALLED_APPS = (
-    "channels",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -37,7 +36,6 @@ INSTALLED_APPS = (
     "django.contrib.staticfiles",
     "django_filters",
     "rest_framework",
-    "rolca.backup",
     "rolca.core",
     "rolca.payment",
     "rolca.rating",
@@ -90,10 +88,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
-
-ASGI_APPLICATION = "tests.routing.application"
-
 MEDIA_ROOT = os.path.join(PROJECT_ROOT, "media")
 MEDIA_URL = "/media/"
 STATIC_URL = "/static/"
@@ -106,6 +100,3 @@ if django.VERSION >= (6, 1):
     MAILERS = {"default": {"BACKEND": "django.core.mail.backends.locmem.EmailBackend"}}
 else:
     EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-BACKUP_AWS_BUCKET_NAME = "test-backups"
-BACKUP_AWS_ACCESS_KEY_ID = "test-access-key"
-BACKUP_AWS_SECRET_ACCESS_KEY = "test-secret-key"
