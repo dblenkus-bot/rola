@@ -32,10 +32,6 @@ jobs:
           POSTGRES_PASSWORD: rola
         ports: ["5432/tcp"]
         options: --health-cmd "pg_isready -U rola" --health-interval 5s --health-timeout 5s --health-retries 15
-      redis:
-        image: redis:8.10.1-alpine
-        ports: ["6379/tcp"]
-        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 15
     env:
       DJANGO_SETTINGS_MODULE: rola.test_settings
       ROLA_TEST_POSTGRESQL: "true"
@@ -49,7 +45,6 @@ jobs:
       ROLCA_POSTGRESQL_NAME: rola
       ROLCA_POSTGRESQL_USER: rola
       ROLCA_POSTGRESQL_PASSWORD: rola
-      ROLCA_REDIS_URL: redis://127.0.0.1:${{ job.services.redis.ports[6379] }}/0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97

@@ -16,8 +16,6 @@ x-backend: &backend
     ROLA_POSTGRESQL_NAME: rola
     ROLA_POSTGRESQL_USER: rola
     ROLA_POSTGRESQL_PASSWORD: ${ROLA_POSTGRESQL_PASSWORD:?Set ROLA_POSTGRESQL_PASSWORD}
-    ROLA_REDIS_HOST: redis
-    ROLA_REDIS_PORT: "6379"
     ROLA_MEDIA_ROOT: /storage/media
     ROLA_STATIC_ROOT: /storage/static
   volumes:
@@ -25,8 +23,6 @@ x-backend: &backend
     - static:/storage/static
   depends_on:
     db:
-      condition: service_healthy
-    redis:
       condition: service_healthy
 
 services:
@@ -45,23 +41,8 @@ services:
       retries: 15
     restart: unless-stopped
 
-  redis:
-    image: redis:8.10.1-alpine
-    healthcheck:
-      test: [CMD, redis-cli, ping]
-      interval: 5s
-      timeout: 5s
-      retries: 15
-    restart: unless-stopped
-
   backend:
     <<: *backend
-    restart: unless-stopped
-
-  worker:
-    <<: *backend
-    profiles: [backup]
-    command: [python, manage.py, runworker, rolca.backup]
     restart: unless-stopped
 
   frontend:

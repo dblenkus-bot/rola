@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-from urllib.parse import quote
 
 from rola.environment import boolean, comma_separated
 
@@ -14,7 +13,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 AUTH_USER_MODEL = "drf_user.User"
 
 INSTALLED_APPS = [
-    "daphne",
     "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -77,30 +75,13 @@ DATABASES = {
 if boolean("ROLA_POSTGRESQL_SSLMODE"):
     DATABASES["default"]["OPTIONS"]["sslmode"] = "require"
 
-redis_scheme = "rediss" if boolean("ROLA_REDIS_SSLMODE") else "redis"
-redis_password = os.environ.get("ROLA_REDIS_PASSWORD", "")
-redis_credentials = f":{quote(redis_password, safe='')}@" if redis_password else ""
-redis_host = os.environ.get("ROLA_REDIS_HOST", "redis")
-redis_port = os.environ.get("ROLA_REDIS_PORT", "6379")
-redis_db = os.environ.get("ROLA_REDIS_DB", "1")
-redis_url = os.environ.get(
-    "ROLA_REDIS_URL",
-    f"{redis_scheme}://{redis_credentials}{redis_host}:{redis_port}/{redis_db}",
-)
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": redis_url,
-        "OPTIONS": {"socket_timeout": 3, "socket_connect_timeout": 3},
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "rola_cache",
     }
 }
-SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [redis_url]},
-    }
-}
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 AUTH_PASSWORD_VALIDATORS = [
     {

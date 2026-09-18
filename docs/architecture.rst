@@ -11,7 +11,7 @@ Backend boundaries
 
 The ``rola`` package selects the database, authentication, storage, email and
 URL configuration. ``drf_user`` implements the current account API. Rolca's
-``core``, ``rating``, ``payment`` and ``backup`` apps contain domain behavior.
+``core``, ``rating`` and ``payment`` apps contain domain behavior.
 
 Rolca relates to the user selected by ``AUTH_USER_MODEL``. Host-specific
 notification configuration and user profile lookups live in
@@ -19,10 +19,9 @@ notification configuration and user profile lookups live in
 integration callables and a different user model without installing
 ``drf_user``. See :doc:`integrations` for that contract.
 
-The optional backup worker is a separate process using the same backend code
-and database. Redis supplies the Channels transport. Enabling it requires both
-the backup app and a running worker; starting the web server alone does not
-process backup messages.
+Gunicorn serves Django's WSGI application. PostgreSQL stores application data
+and sessions. Django's database cache shares account throttle state between
+web processes; initialize its table as described in :doc:`deployment`.
 
 Frontend boundary
 =================

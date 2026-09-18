@@ -12,18 +12,15 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "drf_user/LICENSE"]
 authors = [{name = "Domen Blenkuš", email = "domen@blenkus.com"}]
 dependencies = [
-    "channels>=4.3.2,<5",
-    "channels-redis>=4.3,<5",
-    "daphne>=4.2.3,<5",
     "Django>=6.1.1,<6.2",
     "django-cors-headers>=4.9,<5",
     "django-filter>=26.1,<27",
     "django-storages[s3]>=1.14.6,<2",
     "djangorestframework>=3.18.1,<3.19",
     "drf-spectacular>=0.30,<0.31",
+    "gunicorn>=26.2,<27",
     "Pillow>=12.3,<13",
     "psycopg[binary]>=3.3.5,<4",
-    "redis>=8.1,<9",
 ]
 
 [project.urls]
@@ -55,7 +52,6 @@ django_find_project = false
 addopts = "--import-mode=importlib"
 pythonpath = ["."]
 testpaths = ["drf_user/tests", "rolca", "tests", "rola_integration/tests"]
-markers = ["redis: integration test requiring ROLCA_REDIS_URL"]
 
 [tool.ruff]
 target-version = "py312"

@@ -45,8 +45,9 @@ For an empty database:
 .. code-block:: console
 
    docker compose -f compose.production.yaml build
-   docker compose -f compose.production.yaml up -d db redis
+   docker compose -f compose.production.yaml up -d db
    docker compose -f compose.production.yaml run --rm backend python manage.py migrate --noinput
+   docker compose -f compose.production.yaml run --rm backend python manage.py createcachetable
    docker compose -f compose.production.yaml run --rm backend python manage.py collectstatic --noinput
    docker compose -f compose.production.yaml run --rm backend python manage.py check --deploy
    docker compose -f compose.production.yaml run --rm backend python manage.py createsuperuser
@@ -54,6 +55,11 @@ For an empty database:
 
 For an existing database, perform :doc:`upgrading` before ordinary migration.
 Compose does not automatically apply production migrations at web-server startup.
+
+The backend image runs ``gunicorn --bind 0.0.0.0:8000 rola.wsgi:application``.
+Sessions use Django's database session backend. The shared throttle cache uses
+the ``rola_cache`` table created by ``createcachetable``; initialize it before
+starting the backend.
 
 Files and object storage
 ========================
@@ -70,22 +76,6 @@ To use S3-compatible storage, set ``ROLA_USE_S3=true``,
 Prefer the provider's workload identity where available. Configure static
 bucket delivery and access policy for browser access. Uploaded media uses
 signed URLs and does not overwrite existing object names.
-
-Enable backup processing
-========================
-
-Set ``ROLA_BACKUP_ENABLED=true`` and the ``ROLA_BACKUP_AWS_*`` bucket and
-credential variables in the backend environment. Apply the backup migrations,
-then start the worker profile:
-
-.. code-block:: console
-
-   docker compose -f compose.production.yaml run --rm backend python manage.py migrate --noinput
-   docker compose -f compose.production.yaml --profile backup up -d backend worker frontend
-
-The worker consumes the ``rolca.backup`` channel. The web process and worker
-must use the same database, Redis service, storage configuration and media.
-Verify the upload workflow against a non-production bucket before rollout.
 
 Frontend configuration
 ======================

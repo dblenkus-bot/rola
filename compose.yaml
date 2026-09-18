@@ -14,8 +14,6 @@ x-backend: &backend
     ROLA_POSTGRESQL_NAME: rola
     ROLA_POSTGRESQL_USER: rola
     ROLA_POSTGRESQL_PASSWORD: ${ROLA_POSTGRESQL_PASSWORD:?Set ROLA_POSTGRESQL_PASSWORD in .env}
-    ROLA_REDIS_HOST: redis
-    ROLA_REDIS_PORT: "6379"
     ROLA_MEDIA_ROOT: /storage/media
     ROLA_STATIC_ROOT: /storage/static
   volumes:
@@ -40,19 +38,9 @@ services:
       timeout: 5s
       retries: 15
 
-  redis:
-    image: redis:8.10.1-alpine
-    ports:
-      - "127.0.0.1:${ROLA_REDIS_PORT:-56379}:6379"
-    healthcheck:
-      test: [CMD, redis-cli, ping]
-      interval: 5s
-      timeout: 5s
-      retries: 15
-
   migrate:
     <<: *backend
-    command: [python, manage.py, migrate, --noinput]
+    command: [sh, -c, "python manage.py migrate --noinput && python manage.py createcachetable"]
     depends_on:
       db:
         condition: service_healthy
@@ -63,8 +51,6 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_healthy
 
   frontend:
     build:

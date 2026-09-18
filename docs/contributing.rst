@@ -3,8 +3,8 @@ Develop and validate
 ====================
 
 Use a Python version supported by ``backend/pyproject.toml`` and the Node.js
-version in ``frontend/.node-version``. Docker Compose supplies PostgreSQL and
-Redis for database and worker integration tests.
+version in ``frontend/.node-version``. Docker Compose supplies PostgreSQL for
+database integration tests.
 
 Run the development stack
 =========================
@@ -20,9 +20,9 @@ commit your local environment file. Run from the repository root:
 Open http://localhost:8080. The frontend development server proxies API, admin
 and media requests to Django. Source directories are mounted for live reload.
 
-PostgreSQL and Redis are published only on loopback. Their local ports can be
-changed in ``.env`` if another development stack already uses them. Stopping
-containers retains the database and uploaded media volumes.
+PostgreSQL is published only on loopback. Its local port can be changed in
+``.env`` if another development stack already uses it. Stopping containers
+retains the database and uploaded media volumes.
 
 Native development
 ==================
@@ -33,19 +33,19 @@ Create a virtual environment and install the declared backend dependencies:
 
    python -m venv .venv
    .venv/bin/python -m pip install -e './backend[test,lint,docs,package]'
-   docker compose up -d db redis
+   docker compose up -d db
 
 Set ``ROLA_SECRET_KEY``, ``ROLA_DEBUG=true``, ``ALLOWED_HOSTS`` and the
 ``ROLA_POSTGRESQL_*`` connection variables in your shell. Native commands do not
-automatically load ``.env``. Set ``ROLA_REDIS_HOST=127.0.0.1`` and the published
-Redis port when running Django outside Compose.
-Set ``ROLA_FRONTEND_URL=http://localhost:5173`` so account emails link to the
-frontend development server. Adjust it if you change that server's address.
+automatically load ``.env``. Set ``ROLA_FRONTEND_URL=http://localhost:5173`` so
+account emails link to the frontend development server. Adjust it if you change
+that server's address.
 
 .. code-block:: console
 
    cd backend
    ../.venv/bin/python manage.py migrate
+   ../.venv/bin/python manage.py createcachetable
    ../.venv/bin/python manage.py runserver
 
 In another terminal, start the frontend from its directory:
@@ -77,7 +77,6 @@ The test settings use SQLite for lightweight checks. To validate database
 behavior against PostgreSQL, set ``ROLA_TEST_POSTGRESQL=true`` and the
 ``ROLA_POSTGRESQL_*`` variables before running pytest. The database user must
 be able to create and drop a test database. Use an isolated development server.
-Set ``ROLCA_REDIS_URL`` to run the real Redis transport test.
 
 Frontend checks
 ===============

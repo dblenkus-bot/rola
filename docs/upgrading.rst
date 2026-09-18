@@ -30,8 +30,9 @@ Run from ``backend`` before ordinary ``migrate``:
 
 .. code-block:: console
 
-   ROLA_BACKUP_ENABLED=true python manage.py upgrade_legacy_rolca
-   ROLA_BACKUP_ENABLED=true python manage.py migrate --noinput
+   python manage.py upgrade_legacy_rolca
+   python manage.py migrate --noinput
+   python manage.py createcachetable
    python manage.py collectstatic --noinput
 
 The upgrade command uses the preserved historical migration modules to advance
@@ -39,11 +40,6 @@ a recognized legacy database. It creates the host-owned ``ContestNotification``
 records, copies existing template associations, and verifies those associations
 before removing the old contest column. It then checks the resulting schema
 before recording the portable migration baselines.
-
-Enable the backup app for this command even if it was disabled in the previous
-host. This lets the command adopt all domain app histories consistently; it
-does not start a worker or upload files. Restore the intended backup setting
-afterward.
 
 The command supports rerunning after an interrupted upgrade. It rejects unknown
 migration histories or incompatible schemas instead of guessing that an existing
@@ -66,6 +62,18 @@ configuration in :doc:`deployment`. Python dependencies now come from
 ``backend/pyproject.toml``. The frontend uses npm and Vite; rebuild its static
 assets with the intended public API and payment configuration.
 
+The backend now runs under Gunicorn, uses database sessions and shares throttle
+state through Django's database cache. The ``createcachetable`` command above
+creates the required ``rola_cache`` table.
+
+Stop any old backup worker before deploying this version. The application no
+longer includes backup processing or requires Redis. Remove the old Redis
+service configuration if no other application uses it. The upgrade does not
+delete historical backup records or stored backup files. A migration removes
+the retired backup table's foreign-key constraint on uploaded files so those
+records cannot block normal file deletion. Continue backing up the database
+and uploaded media through your deployment's backup procedures.
+
 Check the following against the restored deployment before switching traffic:
 
 * Registration, activation, login, account updates and password reset.
@@ -73,7 +81,7 @@ Check the following against the restored deployment before switching traffic:
 * Image upload, submission grouping and payment status.
 * Judge assignments, scoring, publication and contest exports.
 * Static files, original images and thumbnails.
-* Email delivery and the optional backup worker with your actual providers.
+* Email delivery with your actual provider.
 
 Account API changes
 ===================

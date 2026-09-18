@@ -20,4 +20,4 @@ COPY manage.py ./
 RUN mkdir -p media static /storage/media /storage/static && chown -R rola:rola /app /storage
 USER rola
 EXPOSE 8000
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "rola.asgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "rola.wsgi:application"]
