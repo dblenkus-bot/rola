@@ -83,6 +83,23 @@ jobs:
       - run: python -m sphinx -W --keep-going -b html docs docs/_build/html
       - run: python -m build backend
       - run: python -m twine check backend/dist/*
+      - name: Check the installed wheel outside the source tree
+        working-directory: ${{ runner.temp }}
+        env:
+          DJANGO_SETTINGS_MODULE: rola.test_settings
+        run: |
+          python -m pip install --no-deps --force-reinstall "$GITHUB_WORKSPACE"/backend/dist/*.whl
+          python -I - <<'PY'
+          import django
+          from django.core.management import call_command
+          from django.template.loader import get_template
+
+          django.setup()
+          call_command("check")
+          for purpose in ("registration", "password_reset"):
+              for template in ("email_subject.txt", "email_body.txt", "email_body.html"):
+                  get_template(f"drf_user/{purpose}/{template}")
+          PY
 
   frontend:
     runs-on: ubuntu-24.04
