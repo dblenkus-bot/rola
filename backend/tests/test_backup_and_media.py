@@ -7,7 +7,6 @@ from unittest.mock import patch
 import pytest
 from asgiref.sync import async_to_sync
 from botocore.exceptions import ClientError
-from channels.exceptions import ChannelFull
 from channels.layers import get_channel_layer
 from django.core.management import call_command
 from django.test import override_settings
@@ -16,10 +15,22 @@ from PIL import Image
 from rolca.backup.consumers import BackupConsumer
 from rolca.backup.models import FileBackup
 from rolca.backup.protocol import CHANNEL_BACKUP, TYPE_FILE
-from rolca.backup.signals import commit_signal
+from rolca.backup.queue import enqueue_backup
 from tests.factories import create_user, photo
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def backup_channel(settings):
+    """Isolate dispatch tests with a bounded in-memory worker queue."""
+    settings.CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+            "CONFIG": {"capacity": 1},
+        }
+    }
+    return get_channel_layer()
 
 
 def test_upload_creates_jpeg_thumbnail_and_pending_backup():
@@ -31,24 +42,32 @@ def test_upload_creates_jpeg_thumbnail_and_pending_backup():
     assert FileBackup.objects.get(source=image).done is None
 
 
-def test_backup_only_enqueues_after_commit(django_capture_on_commit_callbacks):
+def test_backup_only_enqueues_after_commit(
+    django_capture_on_commit_callbacks, backup_channel
+):
     user = create_user("photographer")
-    with patch("rolca.backup.signals.commit_signal") as enqueue:
+    with patch.object(backup_channel, "send", wraps=backup_channel.send) as send:
         with django_capture_on_commit_callbacks(execute=True):
             image = photo(user)
-            enqueue.assert_not_called()
-        enqueue.assert_called_once_with(FileBackup.objects.get(source=image).pk)
+            send.assert_not_called()
+        expected = {
+            "type": TYPE_FILE,
+            "file_backup_pk": FileBackup.objects.get(source=image).pk,
+        }
+        send.assert_called_once_with(CHANNEL_BACKUP, expected)
+    assert async_to_sync(backup_channel.receive)(CHANNEL_BACKUP) == expected
 
 
-def test_backup_queue_full_leaves_pending_record(caplog):
+def test_backup_queue_full_leaves_pending_record(caplog, backup_channel):
     image = photo(create_user("photographer"))
     backup = FileBackup.objects.get(source=image)
-    with patch("rolca.backup.signals.async_to_sync") as sync:
-        sync.return_value.side_effect = ChannelFull
-        commit_signal(backup.pk)
+    existing_message = {"type": TYPE_FILE}
+    async_to_sync(backup_channel.send)(CHANNEL_BACKUP, existing_message)
+    enqueue_backup(backup.pk)
     assert "channel is full" in caplog.text
     backup.refresh_from_db()
     assert backup.done is None
+    assert async_to_sync(backup_channel.receive)(CHANNEL_BACKUP) == existing_message
 
 
 def test_backup_failure_remains_retryable_then_completes():
@@ -71,14 +90,15 @@ def test_backup_failure_remains_retryable_then_completes():
         assert client.upload_fileobj.call_count == 2
 
 
-def test_triggerbackup_reconciles_missing_backup_records():
+def test_triggerbackup_reconciles_missing_backup_records(backup_channel):
     image = photo(create_user("photographer"))
     FileBackup.objects.all().delete()
-    with patch("rolca.backup.management.commands.triggerbackup.async_to_sync") as sync:
-        call_command("triggerbackup")
+    for _ in range(2):
         call_command("triggerbackup")
         assert FileBackup.objects.filter(source=image).count() == 1
-        assert sync.return_value.call_args.args == (CHANNEL_BACKUP, {"type": TYPE_FILE})
+        assert async_to_sync(backup_channel.receive)(CHANNEL_BACKUP) == {
+            "type": TYPE_FILE
+        }
 
 
 @pytest.mark.redis
