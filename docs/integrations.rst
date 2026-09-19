@@ -63,10 +63,8 @@ the callback while retaining an invalid relationship path is not sufficient.
 Migration ownership
 ===================
 
-The ordinary domain migration modules contain portable initial schemas.
-Rola's optional integration package retains the historical migration graph
-needed to upgrade existing databases. A different host starting with an empty
-database uses the portable migrations directly and does not install
-``rola_integration``.
+Each app has an initial migration for its current models. Domain migrations
+reference ``AUTH_USER_MODEL``. A different host can initialize an empty database
+without installing ``drf_user`` or ``rola_integration``.
 
-Existing installations must follow :doc:`upgrading` before switching graphs.
+Existing Rola data is transferred manually as described in :doc:`upgrading`.

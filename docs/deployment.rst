@@ -53,7 +53,7 @@ For an empty database:
    docker compose -f compose.production.yaml run --rm backend python manage.py createsuperuser
    docker compose -f compose.production.yaml up -d backend frontend
 
-For an existing database, perform :doc:`upgrading` before ordinary migration.
+For an existing deployment, follow the manual data transfer in :doc:`upgrading`.
 Compose does not automatically apply production migrations at web-server startup.
 
 The backend image runs ``gunicorn --bind 0.0.0.0:8000 rola.wsgi:application``.

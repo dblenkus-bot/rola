@@ -218,8 +218,3 @@ ROLCA_SUBMISSION_CONFIRMATION_CALLBACK = (
 )
 ROLCA_AUTHOR_COUNTRY_CALLBACK = "rola_integration.hooks.get_author_country"
 ROLCA_AUTHOR_SELECT_RELATED = ("user__location",)
-
-if boolean("ROLA_LEGACY_MIGRATIONS"):
-    from rola_integration.migration_settings import LEGACY_MIGRATION_MODULES
-
-    MIGRATION_MODULES = LEGACY_MIGRATION_MODULES

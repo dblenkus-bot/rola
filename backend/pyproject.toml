@@ -56,7 +56,7 @@ testpaths = ["drf_user/tests", "rolca", "tests", "rola_integration/tests"]
 [tool.ruff]
 target-version = "py312"
 line-length = 88
-extend-exclude = ["**/migrations/**", "**/legacy_migrations/**"]
+extend-exclude = ["**/migrations/**"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]

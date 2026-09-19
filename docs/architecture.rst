@@ -41,6 +41,6 @@ Repository history
 
 The original Rolca history, including its reviewed modernization branch, and
 the frontend history are parents of the import commits in Rola. Directory moves
-preserve Python import paths and Django app labels. Original database table and
-user identities remain significant during upgrades; repository layout does not
-reset migration history.
+preserve Python import paths and Django app labels. Database migrations start
+from fresh initial schemas; existing data is transferred manually as described
+in :doc:`upgrading`.

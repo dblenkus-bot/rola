@@ -16,10 +16,8 @@ updates, exports and media processing. Integration tests use PostgreSQL for the
 host and a separate configuration using Django's standard user model without
 ``drf_user``.
 
-Migration tests start from the preserved historical graph, retain user and
-contest data, copy confirmation-template associations, adopt the portable
-baselines and verify rerunning the upgrade. They also exercise rejection of
-unknown histories and incomplete baseline adoption.
+Both backend configurations initialize their test databases from the current
+initial migrations. CI also checks for model changes missing a migration.
 
 Frontend component tests cover user-visible authentication, API failure
 handling and content behavior.
@@ -28,8 +26,8 @@ Deployment validation
 =====================
 
 Automated tests do not establish that an existing production database or an
-external provider is configured correctly. Rehearse :doc:`upgrading` against a
-restored database and media copy. Verify SMTP, object storage and payment
+external provider is configured correctly. Rehearse the manual data transfer in
+:doc:`upgrading` using a restored database and media copy. Verify SMTP, object storage and payment
 configuration with the deployment's actual providers before switching traffic.
 
 The test fixtures contain synthetic data. No production database, user accounts,

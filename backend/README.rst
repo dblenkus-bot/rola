@@ -13,5 +13,5 @@ the server. Production uses Gunicorn with ``rola.wsgi:application``. Sessions
 and the shared throttle cache use the configured database.
 
 See the repository's ``docs`` directory for development, deployment, integration
-and database-upgrade instructions. Existing Rolca databases require the explicit
-``upgrade_legacy_rolca`` transition before ordinary migration.
+and manual data-transfer instructions. Migrations initialize a new database;
+existing Rolca data must be transferred separately.
