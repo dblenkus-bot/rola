@@ -30,18 +30,18 @@ jobs:
           POSTGRES_DB: rola
           POSTGRES_USER: rola
           POSTGRES_PASSWORD: rola
-        ports: ["5432/tcp"]
+        ports: ["5432:5432"]
         options: --health-cmd "pg_isready -U rola" --health-interval 5s --health-timeout 5s --health-retries 15
     env:
       DJANGO_SETTINGS_MODULE: rola.test_settings
       ROLA_TEST_POSTGRESQL: "true"
       ROLA_POSTGRESQL_HOST: 127.0.0.1
-      ROLA_POSTGRESQL_PORT: ${{ job.services.postgres.ports[5432] }}
+      ROLA_POSTGRESQL_PORT: "5432"
       ROLA_POSTGRESQL_NAME: rola
       ROLA_POSTGRESQL_USER: rola
       ROLA_POSTGRESQL_PASSWORD: rola
       ROLCA_POSTGRESQL_HOST: 127.0.0.1
-      ROLCA_POSTGRESQL_PORT: ${{ job.services.postgres.ports[5432] }}
+      ROLCA_POSTGRESQL_PORT: "5432"
       ROLCA_POSTGRESQL_NAME: rola
       ROLCA_POSTGRESQL_USER: rola
       ROLCA_POSTGRESQL_PASSWORD: rola
