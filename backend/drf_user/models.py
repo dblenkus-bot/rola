@@ -29,6 +29,10 @@ class UserManager(BaseUserManager):
         """Lowercase the address without changing dots or plus tags."""
         return super().normalize_email(email).lower()
 
+    def get_by_natural_key(self, username: str) -> "User":
+        """Find an account independently of email capitalization."""
+        return self.get(email__iexact=self.normalize_email(username))
+
     def _create_user(self, email, password, **extra_fields):
         """Create and save a user with the given email, and password."""
         if not email:

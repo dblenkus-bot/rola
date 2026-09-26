@@ -13,7 +13,11 @@ from rest_framework.test import APIClient
 
 from drf_user.models import Location, Token, User
 from drf_user.serializers import PasswordResetSerializer
-from drf_user.utils.signing import PASSWORD_RESET_SALT, generate_reset_token
+from drf_user.utils.signing import (
+    PASSWORD_RESET_SALT,
+    generate_activation_token,
+    generate_reset_token,
+)
 
 
 @pytest.fixture
@@ -417,3 +421,47 @@ def test_account_manager_normalizes_email(db, method):
     )
     user.refresh_from_db()
     assert user.email == "person.name+contest@example.com"
+
+
+@pytest.mark.parametrize(
+    "email", ["person@example.com", "Person@Example.com", "PERSON@EXAMPLE.COM"]
+)
+def test_login_and_recovery_ignore_email_case(
+    account, email, django_capture_on_commit_callbacks
+):
+    client = APIClient()
+    response = client.post(
+        reverse("login"), {"email": email, "password": "Original!73"}
+    )
+    assert response.status_code == 200
+    assert Token.objects.get(key=response.data["token"]).user_id == account.pk
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(reverse("user-request-password-reset"), {"email": email})
+    assert response.status_code == 200
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == [account.email]
+
+
+@pytest.mark.parametrize("active", [False, True], ids=["activation", "password-reset"])
+def test_email_links_survive_address_normalization(account, active):
+    account.email = "Person@Example.com"
+    account.is_active = active
+    account.save(update_fields=["email", "is_active"])
+    token = (
+        generate_reset_token(account) if active else generate_activation_token(account)
+    )
+    User.objects.filter(pk=account.pk).update(email="person@example.com")
+
+    endpoint = "user-password-reset" if active else "user-activate-account"
+    payload = {"token": token}
+    if active:
+        payload["new_password"] = "Replacement!73"
+    response = APIClient().post(reverse(endpoint), payload)
+
+    assert response.status_code == 200
+    account.refresh_from_db()
+    assert account.email == "person@example.com"
+    assert account.is_active
+    if active:
+        assert account.check_password("Replacement!73")

@@ -268,7 +268,8 @@ class RequestPasswordResetSerializer(serializers.Serializer):
     def save(self, **kwargs):
         """Send a recovery message only for an active account."""
         user = User.objects.filter(
-            email=self.validated_data["email"], is_active=True
+            email__iexact=User.objects.normalize_email(self.validated_data["email"]),
+            is_active=True,
         ).first()
         if user is not None:
             transaction.on_commit(

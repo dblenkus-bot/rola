@@ -78,7 +78,9 @@ def validate_activation_token(token: str, *, lock: bool = False) -> User:
         if not isinstance(email, str):
             raise ValueError("Invalid token payload.")
         users = User.objects.select_for_update() if lock else User.objects
-        return users.get(email=email, is_active=False)
+        return users.get(
+            email__iexact=User.objects.normalize_email(email), is_active=False
+        )
     except (signing.BadSignature, User.DoesNotExist, ValueError, TypeError) as error:
         raise exceptions.ValidationError("Bad token.") from error
 
@@ -98,7 +100,10 @@ def validate_reset_token(token: str, *, lock: bool = False) -> User:
         ):
             raise ValueError("Invalid token payload.")
         users = User.objects.select_for_update() if lock else User.objects
-        user = users.get(email=data["email"], password_reset_counter=data["counter"])
+        user = users.get(
+            email__iexact=User.objects.normalize_email(data["email"]),
+            password_reset_counter=data["counter"],
+        )
     except (
         signing.BadSignature,
         User.DoesNotExist,
