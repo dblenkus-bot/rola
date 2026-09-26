@@ -75,6 +75,19 @@ Check the following against the restored deployment before switching traffic:
 * Static files, original images and thumbnails.
 * Email delivery and the optional backup worker with your actual providers.
 
+Account email normalization
+===========================
+
+Account email addresses are case-insensitive. The email migration checks for
+addresses that become duplicates when lowercased before changing any records.
+If it finds a collision, it stops. Resolve the conflicting addresses manually,
+then rerun ``migrate``. It does not merge or delete accounts.
+
+After the check passes, the migration lowercases stored addresses and adds a
+case-insensitive uniqueness constraint. Dots and ``+tags`` are preserved.
+Existing activation and password-reset links remain valid until their normal
+expiry or invalidation.
+
 Account API changes
 ===================
 

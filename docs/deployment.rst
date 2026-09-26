@@ -119,6 +119,10 @@ mail-delivery design.
 Profile updates
 ===============
 
+Account email addresses are stored in lowercase and matched without regard to
+capitalization for registration, login and recovery. Dots and ``+tags`` remain
+part of the address.
+
 Registration requires a password. Profile PUT and PATCH requests must omit it;
 use the change-password endpoint to replace credentials. PUT requires the full
 profile and address fields, while PATCH accepts partial updates. The verified
