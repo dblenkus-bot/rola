@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from .models import Location, Token, User
 from .utils.signing import (
@@ -60,7 +61,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class NormalizedEmailField(serializers.EmailField):
-    """Normalize email domains before field validators check uniqueness."""
+    """Normalize email addresses before field validators check uniqueness."""
 
     def to_internal_value(self, data):
         """Parse the address using the account manager's normalization rules."""
@@ -126,6 +127,18 @@ class UserWriteSerializer(UserSerializer):
 class UserRegistrationSerializer(UserWriteSerializer):
     """Validate a new account, including its required password."""
 
+    class Meta(UserWriteSerializer.Meta):
+        """Reject existing addresses regardless of their stored capitalization."""
+
+        extra_kwargs = {
+            **UserWriteSerializer.Meta.extra_kwargs,
+            "email": {
+                "validators": [
+                    UniqueValidator(queryset=User.objects.all(), lookup="iexact")
+                ]
+            },
+        }
+
     def validate(self, attrs):
         """Check the password against the submitted account details."""
         attrs = super().validate(attrs)
@@ -161,7 +174,7 @@ class UserUpdateSerializer(UserWriteSerializer):
 
     def validate_email(self, email):
         """Reject changes to the account's verified address."""
-        if email != self.instance.email:
+        if email != User.objects.normalize_email(self.instance.email):
             raise serializers.ValidationError("The email address cannot be changed.")
         return email
 

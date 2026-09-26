@@ -13,6 +13,7 @@ from django.contrib.auth.models import (
 from django.contrib.auth.password_validation import validate_password
 from django.core.mail import send_mail
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils.timezone import now
 
 from .settings import drf_user_settings
@@ -22,6 +23,11 @@ logger = logging.getLogger(__name__)
 
 class UserManager(BaseUserManager):
     """Manager for User model."""
+
+    @classmethod
+    def normalize_email(cls, email: str) -> str:
+        """Lowercase the address without changing dots or plus tags."""
+        return super().normalize_email(email).lower()
 
     def _create_user(self, email, password, **extra_fields):
         """Create and save a user with the given email, and password."""
@@ -139,6 +145,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
         swappable = "AUTH_USER_MODEL"
         ordering = ("internal_id",)
+        constraints = [
+            models.UniqueConstraint(Lower("email"), name="drf_user_email_ci_unique")
+        ]
 
     def clean(self):
         """Clean the model."""

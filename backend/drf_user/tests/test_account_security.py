@@ -305,7 +305,9 @@ def test_malformed_account_id_does_not_reach_uuid_lookup(client):
     assert response.status_code == 404
 
 
-@pytest.mark.parametrize("email", ["person@example.com", "person@Example.com"])
+@pytest.mark.parametrize(
+    "email", ["person@example.com", "person@Example.com", "PERSON@example.com"]
+)
 def test_registration_rejects_normalized_duplicate_email(account, address, email):
     response = APIClient().post(
         reverse("user-list"),
@@ -361,9 +363,57 @@ def test_profile_rejects_email_changes_atomically(client, account, address, meth
 def test_profile_accepts_unchanged_normalized_email(client, account):
     response = client.patch(
         reverse("user-detail", kwargs={"id": account.id}),
-        {"email": "person@Example.com", "first_name": "Updated"},
+        {"email": "Person@Example.com", "first_name": "Updated"},
     )
     assert response.status_code == 200
     account.refresh_from_db()
     assert account.email == "person@example.com"
     assert account.first_name == "Updated"
+
+
+@pytest.mark.parametrize("stored_email", ["person@example.com", "Person@Example.com"])
+def test_registration_checks_uniqueness_against_stored_case(
+    account, address, stored_email
+):
+    User.objects.filter(pk=account.pk).update(email=stored_email)
+    response = APIClient().post(
+        reverse("user-list"),
+        {
+            "email": "PERSON@EXAMPLE.COM",
+            "password": "Original!73",
+            "first_name": "New",
+            "last_name": "Account",
+            **address,
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert set(response.data) == {"email"}
+    assert User.objects.count() == 1
+    assert not Location.objects.exists()
+
+
+def test_registration_lowercases_email_without_removing_dots_or_tags(db, address):
+    response = APIClient().post(
+        reverse("user-list"),
+        {
+            "email": "Person.Name+Contest@Example.com",
+            "password": "Original!73",
+            "first_name": "New",
+            "last_name": "Account",
+            **address,
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    assert response.data["email"] == "person.name+contest@example.com"
+    assert User.objects.get().email == "person.name+contest@example.com"
+
+
+@pytest.mark.parametrize("method", ["create_user", "create_superuser"])
+def test_account_manager_normalizes_email(db, method):
+    user = getattr(User.objects, method)(
+        email="Person.Name+Contest@Example.com", password="Original!73"
+    )
+    user.refresh_from_db()
+    assert user.email == "person.name+contest@example.com"
